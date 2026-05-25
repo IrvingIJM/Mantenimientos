@@ -28,7 +28,7 @@ namespace Mantenimientos.Controllers
             _logger = logger;
         }
 
-        //Modulo de consulta
+        // Modulo de consulta
         public async Task<IActionResult> Index(
             int? filtroRuta,
             string? filtroSucursal,
@@ -65,7 +65,12 @@ namespace Mantenimientos.Controllers
 
             // Listas para filtros
             var todasRutas = await _context.Seguimientos
-                .Select(s => s.RUTA)
+                .Select(r => r.RUTA)
+                .Distinct()
+                .OrderBy(r => r)
+                .ToListAsync();
+            var todasSucursales = await _context.Seguimientos
+                .Select(s => s.SUCURSAL)
                 .Distinct()
                 .OrderBy(s => s)
                 .ToListAsync();
@@ -81,11 +86,96 @@ namespace Mantenimientos.Controllers
                 Seguimientos = seguimientos,
                 FiltroRuta = filtroRuta,
                 FiltroSucursal = filtroSucursal,
+                FiltroMes = filtroMes,
+                FiltroAnio = filtroAnio,
+                RutasDisponibles = todasRutas
+                    .Select(r => new SelectListItem
+                    {
+                        Value = r.ToString(),
+                        Text = r.ToString(),
+                        Selected = filtroRuta.HasValue && r == filtroRuta.Value
+                    }).ToList(),
+                SucursalesDisponibles = todasSucursales
+                    .Select(s => new SelectListItem
+                    {
+                        Value = s,
+                        Text = s,
+                        Selected = s == filtroSucursal
+                    }).ToList(),
+                MesesDisponibles = meses
             };
-
             return View(viewModel);
         }
 
-        //Otros metodos del controlador
+        //Modulo de agregar observaciones
+        //GET /Seguimiento/Observacion/{id?} para editar
+        [HttpGet]
+        public async Task<IActionResult> Observacion(int? id)
+        {
+            ObservacionVM viewModel = new ObservacionVM();
+            if (id.HasValue && id.Value > 0)
+            {
+                var seguimiento = await _context.Seguimientos.FindAsync(id.Value);
+                if (seguimiento == null)
+                {
+                    return NotFound();
+                }
+                viewModel = new ObservacionVM
+                {
+                    RUTA = seguimiento.RUTA,
+                    SUCURSAL = seguimiento.SUCURSAL,
+                    FECHA_INI_ES = seguimiento.FECHA_INI_ES != FechaDefault ? seguimiento.FECHA_INI_ES : null,
+                    FECHA_FIN_ES = seguimiento.FECHA_FIN_ES != FechaDefault ? seguimiento.FECHA_FIN_ES : null,
+                    FECHA_INI_RE = seguimiento.FECHA_INI_RE != FechaDefault ? seguimiento.FECHA_INI_RE : null,
+                    FECHA_FIN_RE = seguimiento.FECHA_FIN_RE != FechaDefault ? seguimiento.FECHA_FIN_RE : null,
+                    OBSERVACIONES = seguimiento.OBSERVACIONES
+                };
+            }
+            else
+            {
+                //Formulario vacio
+                viewModel = new ObservacionVM();
+            }
+            await CargarDropdownAsync(viewModel);
+            return View(viewModel);
+        }
+        //POST /Seguimiento/Observacion
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Observacion(ObservacionVM viewModel)
+        {
+            if (!ModelState.IsValid)
+            {
+                await CargarDropdownAsync(viewModel);
+                return View(viewModel);
+            }
+            var seguimiento = await _context.Seguimientos
+                .FirstOrDefaultAsync(s => s.RUTA == viewModel.RUTA && s.SUCURSAL == viewModel.SUCURSAL);
+            if (seguimiento == null)
+            {
+                seguimiento = new Seguimiento
+                {
+                    RUTA = viewModel.RUTA,
+                    SUCURSAL = viewModel.SUCURSAL,
+                    FECHA_INI_ES = viewModel.FECHA_INI_ES ?? FechaDefault,
+                    FECHA_FIN_ES = viewModel.FECHA_FIN_ES ?? FechaDefault,
+                    FECHA_INI_RE = viewModel.FECHA_INI_RE ?? FechaDefault,
+                    FECHA_FIN_RE = viewModel.FECHA_FIN_RE ?? FechaDefault,
+                    OBSERVACIONES = viewModel.OBSERVACIONES
+                };
+                _context.Seguimientos.Add(seguimiento);
+            }
+            else
+            {
+                seguimiento.FECHA_INI_ES = viewModel.FECHA_INI_ES ?? FechaDefault;
+                seguimiento.FECHA_FIN_ES = viewModel.FECHA_FIN_ES ?? FechaDefault;
+                seguimiento.FECHA_INI_RE = viewModel.FECHA_INI_RE ?? FechaDefault;
+                seguimiento.FECHA_FIN_RE = viewModel.FECHA_FIN_RE ?? FechaDefault;
+                seguimiento.OBSERVACIONES = viewModel.OBSERVACIONES;
+                _context.Seguimientos.Update(seguimiento);
+            }
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
     }
 }

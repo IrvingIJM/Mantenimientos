@@ -15,7 +15,7 @@ namespace Mantenimientos.Models.ViewModels
 
         [Display(Name = "Fecha Inicio Estimada")]
         [DataType(DataType.Date)]
-        public DataType? FECHA_INI_ES { get; set; }
+        public DateTime? FECHA_INI_ES { get; set; }
 
         [Display(Name = "Fecha Fin Estimada")]
         [DataType(DataType.Date)]
@@ -34,7 +34,7 @@ namespace Mantenimientos.Models.ViewModels
         [DataType(DataType.MultilineText)]
         public string? OBSERVACIONES { get; set; }
 
-        //Listas para los deopdown
+        //Listas para los dropdown
         public List<SelectListItem> RutasDisponibles { get; set; } = new();
         public List<SelectListItem> SucursalesDisponibles { get; set; } = new();
     }
