@@ -1,1 +1,256 @@
-﻿
+﻿@model Mantenimientos.Models.ViewModels.IndexVM 
+ 
+@{ 
+    ViewData["Title"] = "Consulta de Mantenimientos";
+}
+
+@functions {
+    static string FormatFecha(DateTime fecha) =>
+        fecha == new DateTime(1900, 1, 1) ? "—" : fecha.ToString("dd/MM/yyyy");
+    static string ClaseDias(int dias)
+    {
+        if (dias > 0)  return "badge bg-danger";
+        if (dias < 0)  return "badge bg-success";
+        return "badge bg-secondary";
+    }
+
+    static string TextoDias(int dias)
+    {
+        if (dias > 0)  return $"+{dias} días";
+        if (dias < 0)  return $"{dias} días";
+        return "En tiempo";
+    }
+}
+
+  <!-- Encabezado -->
+<div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1 class="h2 fw-bold text-dark mb-1">
+                <i class="bi bi-clipboard2-data text-primary me-2"></i>
+                Seguimiento de Mantenimientos
+            </h1>
+            <p class="text-muted mb-0">Consulta, filtra y exporta los registros de mantenimiento.</p>
+        </div>
+        <a asp-action="Observacion" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
+            <i class="bi bi-plus-circle-fill"></i>
+            <span>Nueva Observación</span>
+        </a>
+    </div>
+
+    <!-- Alerta de resultado de operación -->
+
+    @if (TempData["Mensaje"] != null)
+    {
+        var tipo = TempData["TipoAlerta"]?.ToString() ?? "success";
+        <div class="alert alert-@tipo alert-dismissible fade show shadow-sm mb-4" role="alert">
+            @TempData["Mensaje"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Panel de filtros -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header d-flex align-items-center gap-2 py-3"
+             style="background: linear-gradient(135deg, #1D3557 0%, #457B9D 100%);">
+            <i class="bi bi-funnel-fill text-white"></i>
+            <span class="text-white fw-semibold">Filtros de Búsqueda</span>
+        </div>
+        <div class="card-body">
+            <form asp-action="Index" method="get" id="formFiltros">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">
+                            <i class="bi bi-signpost me-1"></i>Ruta
+                        </label>
+                        <select name="filtroRuta" class="form-select">
+                            <option value="">— Todas las rutas —</option>
+                            @foreach (var item in Model.RutasDisponibles) 
+                            {
+                                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">
+                            <i class="bi bi-shop me-1"></i>Sucursal
+                        </label>
+                        <select name="filtroSucursal" class="form-select">
+                            <option value="">— Todas las sucursales —</option>
+                            @foreach (var item in Model.SucursalesDisponibles) 
+                            {
+                                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">
+                            <i class="bi bi-calendar3 me-1"></i>Mes
+                        </label>
+                        <select name="filtroMes" class="form-select">
+                            <option value="">— Todos los meses —</option>
+                            @foreach (var item in Model.MesesDisponibles)
+                            {
+                                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-3 flex-wrap">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Buscar
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
+                    </a>
+                    <div class="ms-auto">
+                        <a asp-action="ExportarExcel"
+                           asp-route-filtroRuta="@Model.FiltroRuta"
+                           asp-route-filtroSucursal="@Model.FiltroSucursal"
+                           asp-route-filtroMes="@Model.FiltroMes"
+                           class="btn btn-success d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-excel-fill"></i>
+                            <span>Exportar a Excel</span>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Tabla principal --> 
+ 
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+            <span class="fw-semibold text-dark">
+                <i class="bi bi-table text-primary me-2"></i>Resultados
+            </span>
+            <span class="badge bg-primary fs-6 rounded-pill">
+                @Model.Seguimientos.Count registro(s)
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tablaMantenimientos">
+                    <thead>
+                        <tr class="table-header-custom">
+                            <th class="ps-4">RUTA</th>
+                            <th>SUCURSAL</th>
+                            <th>FECHA INI. EST.</th>
+                            <th>FECHA FIN EST.</th>
+                            <th>FECHA INI. REAL</th>
+                            <th>FECHA FIN REAL</th>
+                            <th class="text-center">DÍAS ATRASO</th>
+                            <th>OBSERVACIONES</th>
+                            <th class="text-center">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Seguimientos.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-3 text-muted opacity-50"></i>
+                                    <p class="mb-1 fw-semibold">No se encontraron registros</p>
+                                    <small>Ajusta los filtros o agrega nuevas observaciones.</small>
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model.Seguimientos)
+                        {
+                            var esAtrasado  = item.DIAS_ATRASO > 0;
+                            var esAdelanto  = item.DIAS_ATRASO < 0;
+                            <tr class="@(esAtrasado ? "fila-atrasada" : "")">
+                                <td class="ps-4">
+                                    <span class="badge rounded-pill bg-primary-subtle text-primary fw-semibold px-3 py-2">
+                                        @item.RUTA
+                                    </span>
+                                </td>
+                                <td class="fw-medium">@item.SUCURSAL</td>
+                                <td class="text-secondary">@FormatFecha(item.FECHA_INI_ES)</td>
+                                <td class="text-secondary">@FormatFecha(item.FECHA_FIN_ES)</td>
+                                <td>@FormatFecha(item.FECHA_INI_RE)</td>
+                                <td>@FormatFecha(item.FECHA_FIN_RE)</td>
+                                <td class="text-center">
+                                    <span class="@ClaseDias(item.DIAS_ATRASO) rounded-pill px-3">
+                                        @TextoDias(item.DIAS_ATRASO)
+                                    </span>
+                                </td>
+                                <td class="text-secondary obs-cell">
+                                    @if (!string.IsNullOrWhiteSpace(item.OBSERVACIONES))
+                                    {
+                                        var obs = item.OBSERVACIONES;
+                                        var corta = obs.Length > 50 ? obs[..50] + "…" : obs;
+                                        <span data-bs-toggle="tooltip"
+                                              data-bs-placement="top"
+                                              title="@obs">
+                                            @corta
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <em class="text-muted opacity-50">Sin observaciones</em>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <a asp-action="Observacion"
+                                       asp-route-id="@item.ID"
+                                       class="btn btn-sm btn-outline-primary rounded-pill"
+                                       title="Editar registro">
+                                        <i class="bi bi-pencil me-1"></i>Editar
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pie de tabla con estadísticas -->
+        @if (Model.Seguimientos.Any())
+        {
+            var totalAtrasados  = Model.Seguimientos.Count(s => s.DIAS_ATRASO > 0);
+            var totalEnTiempo   = Model.Seguimientos.Count(s => s.DIAS_ATRASO <= 0);
+            var promedioAtraso  = Model.Seguimientos.Where(s => s.DIAS_ATRASO > 0)
+                                       .Select(s => s.DIAS_ATRASO)
+                                       .DefaultIfEmpty(0)
+                                       .Average();
+            <div class="card-footer bg-white border-top py-3">
+                <div class="row g-3 text-center">
+                    <div class="col">
+                        <div class="stat-mini">
+                            <span class="stat-num text-success">@totalEnTiempo</span>
+                            <span class="stat-label">En tiempo / Adelantados</span>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-mini">
+                            <span class="stat-num text-danger">@totalAtrasados</span>
+                            <span class="stat-label">Con atraso</span>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-mini">
+                            <span class="stat-num text-warning">@promedioAtraso.ToString("F1")</span>
+                            <span class="stat-label">Días promedio de atraso</span>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-mini">
+                            <span class="stat-num text-primary">@Model.Seguimientos.Count</span>
+                            <span class="stat-label">Total registros</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+@section Scripts {
+<script>
+    // Inicializar tooltips de Bootstrap
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+</script>
+}
