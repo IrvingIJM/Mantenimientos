@@ -10,7 +10,7 @@ namespace Mantenimientos.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
-        [Required]
+        [Required]  
         public string SUCURSAL { get; set; } = string.Empty;
 
         [Column(TypeName = "date")]
