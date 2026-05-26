@@ -6,12 +6,11 @@ namespace Mantenimientos.Models
     [Table("Seguimientos")]
     public class Seguimiento
     {
+        [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Required]
-        public int RUTA { get; set; }
+        public int ID { get; set; }
 
         [Required]
-        [MaxLength(100)]
         public string SUCURSAL { get; set; } = string.Empty;
 
         [Column(TypeName = "date")]
