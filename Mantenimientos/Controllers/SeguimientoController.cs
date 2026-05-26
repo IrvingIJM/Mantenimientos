@@ -166,7 +166,7 @@ namespace Mantenimientos.Controllers
             // Nuuevo registro o actualización
             try
             {
-                if (model.Id == 0)
+                if (model.RUTA == 0)
                 {
                     var nuevo = new Seguimiento
                     {
@@ -188,21 +188,21 @@ namespace Mantenimientos.Controllers
                 {
                     // Actualizar registro existente
                     var existente = await _context.Seguimientos
-                                                  .FindAsync(model.Id);
+                                                  .FindAsync(model.RUTA);
                     if (existente is null)
                         return NotFound();
 
-                    existente.Ruta = model.Ruta;
-                    existente.Sucursal = model.Sucursal;
-                    existente.FechaInicioEstimada = fechaIniEst;
-                    existente.FechaFinEstimada = fechaFinEst;
-                    existente.FechaInicioReal = fechaIniReal;
-                    existente.FechaFinReal = fechaFinReal;
-                    existente.DiasDesfasados = diasDesfasados;
-                    existente.Observaciones = model.Observaciones?.Trim();
+                    existente.RUTA = model.RUTA;
+                    existente.SUCURSAL = model.SUCURSAL;
+                    existente.FECHA_FIN_ES = fechaIniEst;
+                    existente.FECHA_FIN_ES = fechaFinEst;
+                    existente.FECHA_INI_RE = fechaIniReal;
+                    existente.FECHA_FIN_RE = fechaFinReal;
+                    existente.DIAS_ATRASO = diasDesfasados;
+                    existente.OBSERVACIONES = model.OBSERVACIONES?.Trim();
 
-                    _context.SeguimientoMantenimientos.Update(existente);
-                    TempData["Mensaje"] = "✅ Observación actualizada correctamente.";
+                    _context.Seguimientos.Update(existente);
+                    TempData["Mensaje"] = "Observación actualizada correctamente.";
                     TempData["TipoAlerta"] = "success";
                 }
 
@@ -211,64 +211,48 @@ namespace Mantenimientos.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al guardar observación.");
-                TempData["Mensaje"] = "❌ Error al guardar. Intente nuevamente.";
+                TempData["Mensaje"] = "Error al guardar. Intente nuevamente.";
                 TempData["TipoAlerta"] = "danger";
             }
 
             return RedirectToAction(nameof(Index));
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // EXPORTAR A EXCEL
-        // GET: /Seguimiento/ExportarExcel
-        // ═══════════════════════════════════════════════════════════════
+        //Esportar a Excel
+        //GET: /Seguimiento/Exportar
+
         [HttpGet]
-        public async Task<IActionResult> ExportarExcel(
-            string? filtroRuta,
+        public async Task<IActionResult> Exportar(
+            int? filtroRuta,
             string? filtroSucursal,
             int? filtroMes)
         {
-            var query = _context.SeguimientoMantenimientos.AsQueryable();
+            var query = _context.Seguimientos.AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(filtroRuta))
-                query = query.Where(s => s.Ruta == filtroRuta);
+            if (filtroRuta.HasValue)
+                query = query.Where(s => s.RUTA == filtroRuta.Value);
 
             if (!string.IsNullOrWhiteSpace(filtroSucursal))
-                query = query.Where(s => s.Sucursal == filtroSucursal);
+                query = query.Where(s => s.SUCURSAL == filtroSucursal);
 
             if (filtroMes.HasValue)
                 query = query.Where(s =>
-                    s.FechaInicioEstimada.Month == filtroMes.Value &&
-                    s.FechaInicioEstimada != FechaDefault);
+                    s.FECHA_INI_ES.Month == filtroMes.Value &&
+                    s.FECHA_INI_ES != FechaDefault);
 
             var datos = await query
-                .OrderBy(s => s.Ruta)
-                .ThenBy(s => s.Sucursal)
+                .OrderBy(s => s.RUTA)
+                .ThenBy(s => s.SUCURSAL)
                 .ToListAsync();
 
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
 
-            // ── Encabezado del reporte ────────────────────────────────
-            hoja.Cell(1, 1).Value = $"Reporte de Mantenimientos — Grupo Bimbo";
-            hoja.Range(1, 1, 1, 8).Merge()
-                .Style.Font.SetBold(true)
-                .Font.SetFontSize(14)
-                .Font.SetFontColor(XLColor.White)
-                .Fill.SetBackgroundColor(XLColor.FromHtml("#1D3557"))
-                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
-
-            hoja.Cell(2, 1).Value = $"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}";
-            hoja.Range(2, 1, 2, 8).Merge()
-                .Style.Font.SetItalic(true)
-                .Font.SetFontColor(XLColor.Gray)
-                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
-
-            // ── Cabecera de columnas ──────────────────────────────────
+            //Cabecera de columnas 
             string[] encabezados =
             {
-                "RUTA", "SUCURSAL", "FECHA_INI_ES", "FECHA_FIN_ES",
-                "FECHA_INI_RE", "FECHA_FIN_RE", "DIAS_ATRASO", "OBSERVACIONES"
+                "Ruta", "Sucursal", "Fecha Inicio", "Fecha Fin",
+                "Fecha Inicio", "Fecha Fin", "Dias desfasados", "Observaciones"
             };
 
             for (int col = 0; col < encabezados.Length; col++)
@@ -284,20 +268,20 @@ namespace Mantenimientos.Controllers
                     .Border.SetOutsideBorderColor(XLColor.White);
             }
 
-            // ── Filas de datos ────────────────────────────────────────
+            //Filas de datos 
             for (int i = 0; i < datos.Count; i++)
             {
                 var s = datos[i];
                 int row = i + 5;
 
-                hoja.Cell(row, 1).Value = s.Ruta;
-                hoja.Cell(row, 2).Value = s.Sucursal;
-                hoja.Cell(row, 3).Value = FormatFechaExcel(s.FechaInicioEstimada);
-                hoja.Cell(row, 4).Value = FormatFechaExcel(s.FechaFinEstimada);
-                hoja.Cell(row, 5).Value = FormatFechaExcel(s.FechaInicioReal);
-                hoja.Cell(row, 6).Value = FormatFechaExcel(s.FechaFinReal);
-                hoja.Cell(row, 7).Value = s.DiasDesfasados;
-                hoja.Cell(row, 8).Value = s.Observaciones ?? string.Empty;
+                hoja.Cell(row, 1).Value = s.RUTA;
+                hoja.Cell(row, 2).Value = s.SUCURSAL;
+                hoja.Cell(row, 3).Value = FormatFechaExcel(s.FECHA_INI_ES);
+                hoja.Cell(row, 4).Value = FormatFechaExcel(s.FECHA_FIN_ES);
+                hoja.Cell(row, 5).Value = FormatFechaExcel(s.FECHA_INI_RE);
+                hoja.Cell(row, 6).Value = FormatFechaExcel(s.FECHA_FIN_RE);
+                hoja.Cell(row, 7).Value = s.DIAS_ATRASO;
+                hoja.Cell(row, 8).Value = s.OBSERVACIONES ?? string.Empty;
 
                 // Color alterno de filas
                 var colorFondo = i % 2 == 0
@@ -309,27 +293,27 @@ namespace Mantenimientos.Controllers
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetOutsideBorderColor(XLColor.FromHtml("#CCCCCC"));
 
-                // Colorear días de atraso
-                if (s.DiasDesfasados > 0)
+                //Colorear días de atraso
+                if (s.DIAS_ATRASO > 0)
                     hoja.Cell(row, 7).Style
                         .Font.SetFontColor(XLColor.Red)
                         .Font.SetBold(true);
-                else if (s.DiasDesfasados < 0)
+                else if (s.DIAS_ATRASO < 0)
                     hoja.Cell(row, 7).Style
                         .Font.SetFontColor(XLColor.DarkGreen)
                         .Font.SetBold(true);
             }
 
-            // ── Resumen al final ──────────────────────────────────────
+            //Resumen al final
             int filaResumen = datos.Count + 6;
             hoja.Cell(filaResumen, 1).Value = $"Total registros: {datos.Count}";
-            hoja.Cell(filaResumen, 7).Value = $"Promedio atraso: {(datos.Count > 0 ? datos.Average(d => d.DiasDesfasados) : 0):F1} días";
+            hoja.Cell(filaResumen, 7).Value = $"Promedio atraso: {(datos.Count > 0 ? datos.Average(d => d.DIAS_ATRASO) : 0):F1} días";
 
-            // ── Autoajuste de columnas ────────────────────────────────
+            //Autoajuste de columnas
             hoja.Columns().AdjustToContents();
-            hoja.Column(8).Width = 50; // Observaciones más ancha
+            hoja.Column(8).Width = 50;
 
-            // ── Generar archivo y retornar ────────────────────────────
+            //Generar archivo y retornar
             await using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             stream.Position = 0;
@@ -341,29 +325,25 @@ namespace Mantenimientos.Controllers
                 nombreArchivo);
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // ENDPOINTS AJAX — Carga dinámica de selects
-        // ═══════════════════════════════════════════════════════════════
+        //Carga dinámica de selects
 
-        /// <summary>Retorna sucursales para una ruta en formato JSON.</summary>
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursales(string ruta)
         {
             if (string.IsNullOrWhiteSpace(ruta))
                 return Json(new List<string>());
 
-            var sucursales = await _empresaService.ObtenerSucursalesPorRutaAsync(ruta);
+            var sucursales = await _empDataService.ObtenerSucursales(ruta);
             return Json(sucursales);
         }
 
-        /// <summary>Retorna fechas estimadas para una Ruta+Sucursal en formato JSON.</summary>
         [HttpGet]
         public async Task<IActionResult> ObtenerFechasEstimadas(string ruta, string sucursal)
         {
             if (string.IsNullOrWhiteSpace(ruta) || string.IsNullOrWhiteSpace(sucursal))
                 return Json(new { });
 
-            var fechas = await _empresaService.ObtenerFechasEstimadasAsync(ruta, sucursal);
+            var fechas = await _empDataService.ObtenerFechasEstimadasAsync(ruta, sucursal);
 
             if (fechas is null)
                 return Json(new { });
@@ -379,24 +359,21 @@ namespace Mantenimientos.Controllers
             });
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // MÉTODOS PRIVADOS AUXILIARES
-        // ═══════════════════════════════════════════════════════════════
-
-        private async Task CargarDropdownsAsync(ObservacionViewModel model)
+        //Metodos privados auxiliares
+        private async Task CargarDropdownAsync(ObservacionVM model)
         {
-            // Rutas desde BD empresa
+            // Rutas desde BD emp
             try
             {
-                var rutas = await _empresaService.ObtenerRutasAsync();
+                var rutas = await _empDataService.ObtenerRutasAsync();
                 model.RutasDisponibles = rutas
                     .Select(r => new SelectListItem { Value = r, Text = r })
                     .ToList();
 
                 // Si ya hay una ruta seleccionada, cargar sus sucursales
-                if (!string.IsNullOrWhiteSpace(model.Ruta))
+                if (model.RUTA != 0)
                 {
-                    var sucursales = await _empresaService.ObtenerSucursalesPorRutaAsync(model.Ruta);
+                    var sucursales = await _empDataService.ObtenerSucursales(model.RUTA.ToString());
                     model.SucursalesDisponibles = sucursales
                         .Select(s => new SelectListItem { Value = s, Text = s })
                         .ToList();
