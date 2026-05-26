@@ -5,6 +5,8 @@ namespace Mantenimientos.Models.ViewModels
 {
     public class ObservacionVM
     {
+        public int ID { get; set; }
+
         [Required(ErrorMessage = "La ruta es obligatoria.")]
         [Display(Name = "Ruta")]
         public int RUTA { get; set; }

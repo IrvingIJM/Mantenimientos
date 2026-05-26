@@ -20,7 +20,8 @@ namespace Mantenimientos.Data
             modelBuilder.Entity<Seguimiento>(entity =>
             {
                 entity.ToTable("Seguimientos");
-                entity.Property(e => e.RUTA).IsRequired().HasMaxLength(100);
+                entity.HasKey(e => e.ID);
+                entity.Property(e => e.RUTA).IsRequired();
                 entity.Property(e => e.SUCURSAL).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.FECHA_INI_ES).HasColumnType("date").HasDefaultValue(new DateTime(1900, 1, 1));
                 entity.Property(e => e.FECHA_FIN_ES).HasColumnType("date").HasDefaultValue(new DateTime(1900, 1, 1));

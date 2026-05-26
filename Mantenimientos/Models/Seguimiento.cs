@@ -10,7 +10,11 @@ namespace Mantenimientos.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ID { get; set; }
 
-        [Required]  
+        [Required]
+        public int RUTA { get; set; }
+
+        [Required]
+        [MaxLength(200)]
         public string SUCURSAL { get; set; } = string.Empty;
 
         [Column(TypeName = "date")]
