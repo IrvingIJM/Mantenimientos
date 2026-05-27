@@ -23,10 +23,10 @@ namespace Mantenimientos.Models.ViewModels
         public int ID { get; set; }
         public int RUTA { get; set; }
         public string SUCURSAL { get; set; } = string.Empty;
-        public DateTime FECHA_INI_ES { get; set; }
-        public DateTime FECHA_FIN_ES { get; set; }
-        public DateTime FECHA_INI_RE { get; set; }
-        public DateTime FECHA_FIN_RE { get; set; }
+        public DateTime? FECHA_INI_ES { get; set; }
+        public DateTime? FECHA_FIN_ES { get; set; }
+        public DateTime? FECHA_INI_RE { get; set; }
+        public DateTime? FECHA_FIN_RE { get; set; }
         public int DIAS_ATRASO { get; set; }
         public string? OBSERVACIONES { get; set; }
     }

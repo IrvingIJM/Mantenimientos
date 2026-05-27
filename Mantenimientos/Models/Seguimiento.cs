@@ -18,17 +18,17 @@ namespace Mantenimientos.Models
         public string SUCURSAL { get; set; } = string.Empty;
 
         [Column(TypeName = "date")]
-        public DateTime FECHA_INI_ES { get; set; } = new DateTime(1900, 1, 1);
+        public DateTime? FECHA_INI_ES { get; set; } = new DateTime(1900, 1, 1);
         [Column(TypeName = "date")]
-        public DateTime FECHA_FIN_ES { get; set; } = new DateTime(1900, 1, 1);
+        public DateTime? FECHA_FIN_ES { get; set; } = new DateTime(1900, 1, 1);
 
         [Column(TypeName = "date")]
-        public DateTime FECHA_INI_RE { get; set; } = new DateTime(1900, 1, 1);
+        public DateTime? FECHA_INI_RE { get; set; } = new DateTime(1900, 1, 1);
 
         [Column(TypeName = "date")]
-        public DateTime FECHA_FIN_RE { get; set; } = new DateTime(1900, 1, 1);
+        public DateTime? FECHA_FIN_RE { get; set; } = new DateTime(1900, 1, 1);
 
-        public int DIAS_ATRASO { get; set; } = 0;
+        public int? DIAS_ATRASO { get; set; } = 0;
 
         [Column(TypeName = "nvarchar(max)")]
         public string? OBSERVACIONES { get; set; }

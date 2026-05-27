@@ -26,7 +26,7 @@ namespace Mantenimientos.Services
                 await conn.OpenAsync();
                 const string sql = @"
                     SELECT DISTINCT RUTA
-                    FROM mttos
+                    FROM iker
                     WHERE RUTA IS NOT NULL
                     ORDER BY RUTA";
                 await using var cmd = new SqlCommand(sql, conn);
@@ -51,7 +51,7 @@ namespace Mantenimientos.Services
                 await conn.OpenAsync();
                 const string sql = @"
                     SELECT DISTINCT SUCURSAL
-                    FROM mttos
+                    FROM iker
                     WHERE RUTA  = @Ruta
                     AND SUCURSAL IS NOT NULL
                     ORDER BY SUCURSAL";

@@ -17,7 +17,6 @@ namespace Mantenimientos.Controllers
         private readonly ILogger<SeguimientoController> _logger;
 
         //Fecha por defecto para valores nulos
-        private static readonly DateTime FechaDefault = new(1900, 1, 1);
         public SeguimientoController(
             ApplicationDbContext context,
             EmpDataService empDataService,
@@ -42,9 +41,14 @@ namespace Mantenimientos.Controllers
             if (!string.IsNullOrEmpty(filtroSucursal))
                 query = query.Where(s => s.SUCURSAL == filtroSucursal);
             if (filtroMes.HasValue)
-                query = query.Where(s => s.FECHA_INI_ES.Month == filtroMes.Value && s.FECHA_INI_ES != FechaDefault);
+                query = query.Where(s =>
+                    s.FECHA_INI_ES.HasValue &&
+                    s.FECHA_INI_ES.Value.Month == filtroMes.Value);
+
             if (filtroAnio.HasValue)
-                query = query.Where(s => s.FECHA_INI_ES.Year == filtroAnio.Value && s.FECHA_INI_ES != FechaDefault);
+                query = query.Where(s =>
+                    s.FECHA_INI_ES.HasValue &&
+                    s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
 
             //proyeccion a ViewModel
             var seguimientos = await query
@@ -58,7 +62,7 @@ namespace Mantenimientos.Controllers
                     FECHA_FIN_ES = s.FECHA_FIN_ES,
                     FECHA_INI_RE = s.FECHA_INI_RE,
                     FECHA_FIN_RE = s.FECHA_FIN_RE,
-                    DIAS_ATRASO = s.DIAS_ATRASO,
+                    DIAS_ATRASO = s.DIAS_ATRASO ?? 0,
                     OBSERVACIONES = s.OBSERVACIONES
                 })
                 .ToListAsync();
@@ -124,10 +128,10 @@ namespace Mantenimientos.Controllers
                 {
                     RUTA = seguimiento.RUTA,
                     SUCURSAL = seguimiento.SUCURSAL,
-                    FECHA_INI_ES = seguimiento.FECHA_INI_ES != FechaDefault ? seguimiento.FECHA_INI_ES : null,
-                    FECHA_FIN_ES = seguimiento.FECHA_FIN_ES != FechaDefault ? seguimiento.FECHA_FIN_ES : null,
-                    FECHA_INI_RE = seguimiento.FECHA_INI_RE != FechaDefault ? seguimiento.FECHA_INI_RE : null,
-                    FECHA_FIN_RE = seguimiento.FECHA_FIN_RE != FechaDefault ? seguimiento.FECHA_FIN_RE : null,
+                    FECHA_INI_ES = seguimiento.FECHA_INI_ES,
+                    FECHA_FIN_ES = seguimiento.FECHA_FIN_ES,
+                    FECHA_INI_RE = seguimiento.FECHA_INI_RE,
+                    FECHA_FIN_RE = seguimiento.FECHA_FIN_RE,
                     OBSERVACIONES = seguimiento.OBSERVACIONES
                 };
             }
@@ -151,17 +155,16 @@ namespace Mantenimientos.Controllers
             }
 
             //Asignar fecha por defecto
-            var fechaIniEst = model.FECHA_INI_ES ?? FechaDefault;
-            var fechaFinEst = model.FECHA_FIN_ES ?? FechaDefault;
-            var fechaIniReal = model.FECHA_INI_RE ?? FechaDefault;
-            var fechaFinReal = model.FECHA_FIN_RE ?? FechaDefault;
+            var fechaIniEst = model.FECHA_INI_ES;
+            var fechaFinEst = model.FECHA_FIN_ES;
+            var fechaIniReal = model.FECHA_INI_RE;
+            var fechaFinReal = model.FECHA_FIN_RE;
 
             //Calcular dias de atraso
             int diasDesfasados = 0;
-            if (fechaFinReal != FechaDefault &&
-                fechaFinEst != FechaDefault)
+            if (fechaFinReal.HasValue && fechaFinEst.HasValue)
             {
-                diasDesfasados = (int)(fechaFinReal - fechaFinEst).TotalDays;
+                diasDesfasados = (int)(fechaFinReal.Value - fechaFinEst.Value).TotalDays;
             }
             // Nuuevo registro o actualización
             try
@@ -194,8 +197,8 @@ namespace Mantenimientos.Controllers
 
                     existente.RUTA = model.RUTA;
                     existente.SUCURSAL = model.SUCURSAL;
-                    existente.FECHA_FIN_ES = fechaIniEst;
-                    existente.FECHA_FIN_ES = fechaFinEst;
+                    existente.FECHA_INI_ES = fechaIniEst;
+                    existente.FECHA_FIN_ES = fechaFinEst; 
                     existente.FECHA_INI_RE = fechaIniReal;
                     existente.FECHA_FIN_RE = fechaFinReal;
                     existente.DIAS_ATRASO = diasDesfasados;
@@ -235,10 +238,9 @@ namespace Mantenimientos.Controllers
             if (!string.IsNullOrWhiteSpace(filtroSucursal))
                 query = query.Where(s => s.SUCURSAL == filtroSucursal);
 
-            if (filtroMes.HasValue)
-                query = query.Where(s =>
-                    s.FECHA_INI_ES.Month == filtroMes.Value &&
-                    s.FECHA_INI_ES != FechaDefault);
+            query = query.Where(s =>
+                s.FECHA_INI_ES.HasValue &&
+                s.FECHA_INI_ES.Value.Month == filtroMes.Value);
 
             var datos = await query
                 .OrderBy(s => s.RUTA)
@@ -294,11 +296,11 @@ namespace Mantenimientos.Controllers
                     .Border.SetOutsideBorderColor(XLColor.FromHtml("#CCCCCC"));
 
                 //Colorear días de atraso
-                if (s.DIAS_ATRASO > 0)
+                if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value > 0)
                     hoja.Cell(row, 7).Style
                         .Font.SetFontColor(XLColor.Red)
                         .Font.SetBold(true);
-                else if (s.DIAS_ATRASO < 0)
+                else if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value < 0)
                     hoja.Cell(row, 7).Style
                         .Font.SetFontColor(XLColor.DarkGreen)
                         .Font.SetBold(true);
@@ -307,7 +309,7 @@ namespace Mantenimientos.Controllers
             //Resumen al final
             int filaResumen = datos.Count + 6;
             hoja.Cell(filaResumen, 1).Value = $"Total registros: {datos.Count}";
-            hoja.Cell(filaResumen, 7).Value = $"Promedio atraso: {(datos.Count > 0 ? datos.Average(d => d.DIAS_ATRASO) : 0):F1} días";
+            hoja.Cell(filaResumen, 7).Value = $"Promedio atraso: {(datos.Count > 0 ? datos.Average(d => d.DIAS_ATRASO ?? 0) : 0):F1} días";
 
             //Autoajuste de columnas
             hoja.Columns().AdjustToContents();
@@ -350,12 +352,8 @@ namespace Mantenimientos.Controllers
 
             return Json(new
             {
-                fechaIniEst = fechas.FechaInicioEstimada == FechaDefault
-                    ? string.Empty
-                    : fechas.FechaInicioEstimada.ToString("yyyy-MM-dd"),
-                fechaFinEst = fechas.FechaFinEstimada == FechaDefault
-                    ? string.Empty
-                    : fechas.FechaFinEstimada.ToString("yyyy-MM-dd")
+                fechaIniEst = fechas.FechaInicioEstimada.ToString("yyyy-MM-dd") ?? string.Empty,
+                fechaFinEst = fechas.FechaFinEstimada.ToString("yyyy-MM-dd") ?? string.Empty,
             });
         }
 
@@ -387,7 +385,7 @@ namespace Mantenimientos.Controllers
             }
         }
 
-        private static string FormatFechaExcel(DateTime fecha) =>
-            fecha == FechaDefault ? "N/A" : fecha.ToString("dd/MM/yyyy");
+        private static string FormatFechaExcel(DateTime? fecha) =>
+            fecha?.ToString("dd/MM/yyyy") ?? "N/A";
     }
 }

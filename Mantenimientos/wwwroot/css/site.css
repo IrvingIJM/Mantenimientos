@@ -100,8 +100,8 @@ body {
 /* Tabla */
 
 .table-header-custom th {
-    background: var(--bimbo-azul-oscuro);
-    color: white;
+    background-color: var(--bimbo-azul-oscuro) !important;
+    color: #ffffff !important;
     font-size: 0.78rem;
     font-weight: 600;
     letter-spacing: 0.04em;
