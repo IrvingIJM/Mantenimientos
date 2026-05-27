@@ -6,7 +6,6 @@ using Mantenimientos.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Mantenimientos.Controllers
 {
@@ -16,7 +15,6 @@ namespace Mantenimientos.Controllers
         private readonly EmpDataService _empDataService;
         private readonly ILogger<SeguimientoController> _logger;
 
-        //Fecha por defecto para valores nulos
         public SeguimientoController(
             ApplicationDbContext context,
             EmpDataService empDataService,
@@ -27,19 +25,21 @@ namespace Mantenimientos.Controllers
             _logger = logger;
         }
 
-        // Modulo de consulta
+        // GET  /Seguimiento/Index
         public async Task<IActionResult> Index(
             int? filtroRuta,
             string? filtroSucursal,
             int? filtroMes,
             int? filtroAnio)
         {
-            // Consulta con filtros
             var query = _context.Seguimientos.AsQueryable();
+
             if (filtroRuta.HasValue)
                 query = query.Where(s => s.RUTA == filtroRuta.Value);
+
             if (!string.IsNullOrEmpty(filtroSucursal))
                 query = query.Where(s => s.SUCURSAL == filtroSucursal);
+
             if (filtroMes.HasValue)
                 query = query.Where(s =>
                     s.FECHA_INI_ES.HasValue &&
@@ -50,12 +50,12 @@ namespace Mantenimientos.Controllers
                     s.FECHA_INI_ES.HasValue &&
                     s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
 
-            //proyeccion a ViewModel
             var seguimientos = await query
                 .OrderBy(s => s.RUTA)
                 .ThenBy(s => s.SUCURSAL)
                 .Select(s => new SeguimientoViewModel
                 {
+                    ID = s.ID,
                     RUTA = s.RUTA,
                     SUCURSAL = s.SUCURSAL,
                     FECHA_INI_ES = s.FECHA_INI_ES,
@@ -67,17 +67,23 @@ namespace Mantenimientos.Controllers
                 })
                 .ToListAsync();
 
-            // Listas para filtros
+            // Rutas disponibles (desde la BD de mttos)
             var todasRutas = await _context.Seguimientos
                 .Select(r => r.RUTA)
                 .Distinct()
                 .OrderBy(r => r)
                 .ToListAsync();
-            var todasSucursales = await _context.Seguimientos
+
+            var sucursalesQuery = _context.Seguimientos.AsQueryable();
+            if (filtroRuta.HasValue)
+                sucursalesQuery = sucursalesQuery.Where(s => s.RUTA == filtroRuta.Value);
+
+            var todasSucursales = await sucursalesQuery
                 .Select(s => s.SUCURSAL)
                 .Distinct()
                 .OrderBy(s => s)
                 .ToListAsync();
+
             var meses = Enumerable.Range(1, 12)
                 .Select(m => new SelectListItem
                 {
@@ -85,6 +91,7 @@ namespace Mantenimientos.Controllers
                     Text = new DateTime(2000, m, 1).ToString("MMMM")
                 })
                 .ToList();
+
             var viewModel = new IndexVM
             {
                 Seguimientos = seguimientos,
@@ -108,24 +115,25 @@ namespace Mantenimientos.Controllers
                     }).ToList(),
                 MesesDisponibles = meses
             };
+
             return View(viewModel);
         }
 
-        //Modulo de agregar observaciones
-        //GET /Seguimiento/Observacion/{id?} para editar
+        // GET  /Seguimiento/Observacion/{id?}
         [HttpGet]
         public async Task<IActionResult> Observacion(int? id)
         {
-            ObservacionVM viewModel = new ObservacionVM();
+            var viewModel = new ObservacionVM();
+
             if (id.HasValue && id.Value > 0)
             {
                 var seguimiento = await _context.Seguimientos.FindAsync(id.Value);
                 if (seguimiento == null)
-                {
                     return NotFound();
-                }
+
                 viewModel = new ObservacionVM
                 {
+                    ID = seguimiento.ID,
                     RUTA = seguimiento.RUTA,
                     SUCURSAL = seguimiento.SUCURSAL,
                     FECHA_INI_ES = seguimiento.FECHA_INI_ES,
@@ -135,15 +143,12 @@ namespace Mantenimientos.Controllers
                     OBSERVACIONES = seguimiento.OBSERVACIONES
                 };
             }
-            else
-            {
-                //Formulario vacio
-                viewModel = new ObservacionVM();
-            }
+
             await CargarDropdownAsync(viewModel);
             return View(viewModel);
         }
-        //POST /Seguimiento/Observacion
+
+        // POST /Seguimiento/Observacion
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Observacion(ObservacionVM model)
@@ -154,31 +159,24 @@ namespace Mantenimientos.Controllers
                 return View(model);
             }
 
-            //Asignar fecha por defecto
-            var fechaIniEst = model.FECHA_INI_ES;
-            var fechaFinEst = model.FECHA_FIN_ES;
-            var fechaIniReal = model.FECHA_INI_RE;
-            var fechaFinReal = model.FECHA_FIN_RE;
-
-            //Calcular dias de atraso
+            // Calcular días de atraso
             int diasDesfasados = 0;
-            if (fechaFinReal.HasValue && fechaFinEst.HasValue)
-            {
-                diasDesfasados = (int)(fechaFinReal.Value - fechaFinEst.Value).TotalDays;
-            }
-            // Nuuevo registro o actualización
+            if (model.FECHA_FIN_RE.HasValue && model.FECHA_FIN_ES.HasValue)
+                diasDesfasados = (int)(model.FECHA_FIN_RE.Value - model.FECHA_FIN_ES.Value).TotalDays;
+
             try
             {
-                if (model.RUTA == 0)
+                // edición por ID
+                if (model.ID == 0)
                 {
                     var nuevo = new Seguimiento
                     {
                         RUTA = model.RUTA,
                         SUCURSAL = model.SUCURSAL,
-                        FECHA_INI_ES = fechaIniEst,
-                        FECHA_FIN_ES = fechaFinEst,
-                        FECHA_INI_RE = fechaIniReal,
-                        FECHA_FIN_RE = fechaFinReal,
+                        FECHA_INI_ES = model.FECHA_INI_ES,
+                        FECHA_FIN_ES = model.FECHA_FIN_ES,
+                        FECHA_INI_RE = model.FECHA_INI_RE,
+                        FECHA_FIN_RE = model.FECHA_FIN_RE,
                         DIAS_ATRASO = diasDesfasados,
                         OBSERVACIONES = model.OBSERVACIONES?.Trim()
                     };
@@ -189,18 +187,17 @@ namespace Mantenimientos.Controllers
                 }
                 else
                 {
-                    // Actualizar registro existente
-                    var existente = await _context.Seguimientos
-                                                  .FindAsync(model.RUTA);
+                
+                    var existente = await _context.Seguimientos.FindAsync(model.ID);
                     if (existente is null)
                         return NotFound();
 
                     existente.RUTA = model.RUTA;
                     existente.SUCURSAL = model.SUCURSAL;
-                    existente.FECHA_INI_ES = fechaIniEst;
-                    existente.FECHA_FIN_ES = fechaFinEst; 
-                    existente.FECHA_INI_RE = fechaIniReal;
-                    existente.FECHA_FIN_RE = fechaFinReal;
+                    existente.FECHA_INI_ES = model.FECHA_INI_ES;
+                    existente.FECHA_FIN_ES = model.FECHA_FIN_ES;
+                    existente.FECHA_INI_RE = model.FECHA_INI_RE;
+                    existente.FECHA_FIN_RE = model.FECHA_FIN_RE;
                     existente.DIAS_ATRASO = diasDesfasados;
                     existente.OBSERVACIONES = model.OBSERVACIONES?.Trim();
 
@@ -221,9 +218,7 @@ namespace Mantenimientos.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        //Esportar a Excel
-        //GET: /Seguimiento/Exportar
-
+        // GET  /Seguimiento/Exportar
         [HttpGet]
         public async Task<IActionResult> Exportar(
             int? filtroRuta,
@@ -238,9 +233,10 @@ namespace Mantenimientos.Controllers
             if (!string.IsNullOrWhiteSpace(filtroSucursal))
                 query = query.Where(s => s.SUCURSAL == filtroSucursal);
 
-            query = query.Where(s =>
-                s.FECHA_INI_ES.HasValue &&
-                s.FECHA_INI_ES.Value.Month == filtroMes.Value);
+            if (filtroMes.HasValue)
+                query = query.Where(s =>
+                    s.FECHA_INI_ES.HasValue &&
+                    s.FECHA_INI_ES.Value.Month == filtroMes.Value);
 
             var datos = await query
                 .OrderBy(s => s.RUTA)
@@ -250,11 +246,13 @@ namespace Mantenimientos.Controllers
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
 
-            //Cabecera de columnas 
+            // Encabezados de columnas
             string[] encabezados =
             {
-                "Ruta", "Sucursal", "Fecha Inicio", "Fecha Fin",
-                "Fecha Inicio", "Fecha Fin", "Dias desfasados", "Observaciones"
+                "Ruta", "Sucursal",
+                "F. Inicio Est.", "F. Fin Est.",
+                "F. Inicio Real", "F. Fin Real",
+                "Días Desfasados", "Observaciones"
             };
 
             for (int col = 0; col < encabezados.Length; col++)
@@ -270,7 +268,7 @@ namespace Mantenimientos.Controllers
                     .Border.SetOutsideBorderColor(XLColor.White);
             }
 
-            //Filas de datos 
+            // Filas de datos
             for (int i = 0; i < datos.Count; i++)
             {
                 var s = datos[i];
@@ -285,50 +283,44 @@ namespace Mantenimientos.Controllers
                 hoja.Cell(row, 7).Value = s.DIAS_ATRASO;
                 hoja.Cell(row, 8).Value = s.OBSERVACIONES ?? string.Empty;
 
-                // Color alterno de filas
-                var colorFondo = i % 2 == 0
-                    ? XLColor.White
-                    : XLColor.FromHtml("#F1FAEE");
-
+                var colorFondo = i % 2 == 0 ? XLColor.White : XLColor.FromHtml("#F1FAEE");
                 hoja.Range(row, 1, row, 8).Style
                     .Fill.SetBackgroundColor(colorFondo)
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetOutsideBorderColor(XLColor.FromHtml("#CCCCCC"));
 
-                //Colorear días de atraso
                 if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value > 0)
-                    hoja.Cell(row, 7).Style
-                        .Font.SetFontColor(XLColor.Red)
-                        .Font.SetBold(true);
+                    hoja.Cell(row, 7).Style.Font.SetFontColor(XLColor.Red).Font.SetBold(true);
                 else if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value < 0)
-                    hoja.Cell(row, 7).Style
-                        .Font.SetFontColor(XLColor.DarkGreen)
-                        .Font.SetBold(true);
+                    hoja.Cell(row, 7).Style.Font.SetFontColor(XLColor.DarkGreen).Font.SetBold(true);
             }
 
-            //Resumen al final
-            int filaResumen = datos.Count + 6;
-            hoja.Cell(filaResumen, 1).Value = $"Total registros: {datos.Count}";
-            hoja.Cell(filaResumen, 7).Value = $"Promedio atraso: {(datos.Count > 0 ? datos.Average(d => d.DIAS_ATRASO ?? 0) : 0):F1} días";
-
-            //Autoajuste de columnas
-            hoja.Columns().AdjustToContents();
-            hoja.Column(8).Width = 50;
-
-            //Generar archivo y retornar
-            await using var stream = new MemoryStream();
-            workbook.SaveAs(stream);
-            stream.Position = 0;
-
-            var nombreArchivo = $"Mantenimientos_Bimbo_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-            return File(
-                stream.ToArray(),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                nombreArchivo);
+            // Guardar y devolver el archivo Excel
+            using var ms = new System.IO.MemoryStream();
+            workbook.SaveAs(ms);
+            ms.Seek(0, System.IO.SeekOrigin.Begin);
+            var content = ms.ToArray();
+            var fileName = $"Mantenimientos_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
-        //Carga dinámica de selects
+        // GET  /Seguimiento/ObtenerSucursalesFiltro?ruta=X
+        // Sucursales registradas en mttos para el filtro del Index
+        [HttpGet]
+        public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
+        {
+            var sucursales = await _context.Seguimientos
+                .Where(s => s.RUTA == ruta)
+                .Select(s => s.SUCURSAL)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToListAsync();
 
+            return Json(sucursales);
+        }
+
+        // GET  /Seguimiento/ObtenerSucursales?ruta=X
+        // Sucursales desde BD empresa (iker) para Observacion
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursales(string ruta)
         {
@@ -339,6 +331,7 @@ namespace Mantenimientos.Controllers
             return Json(sucursales);
         }
 
+        // GET  /Seguimiento/ObtenerFechasEstimadas?ruta=X&sucursal=Y
         [HttpGet]
         public async Task<IActionResult> ObtenerFechasEstimadas(string ruta, string sucursal)
         {
@@ -352,23 +345,23 @@ namespace Mantenimientos.Controllers
 
             return Json(new
             {
-                fechaIniEst = fechas.FechaInicioEstimada.ToString("yyyy-MM-dd") ?? string.Empty,
-                fechaFinEst = fechas.FechaFinEstimada.ToString("yyyy-MM-dd") ?? string.Empty,
+                fechaIniEst = fechas.FechaInicioEstimada.ToString("yyyy-MM-dd"),
+                fechaFinEst = fechas.FechaFinEstimada.ToString("yyyy-MM-dd")
             });
         }
 
-        //Metodos privados auxiliares
+        // Auxiliares privados
         private async Task CargarDropdownAsync(ObservacionVM model)
         {
-            // Rutas desde BD emp
             try
             {
+                // Rutas desde BD empresa
                 var rutas = await _empDataService.ObtenerRutasAsync();
                 model.RutasDisponibles = rutas
                     .Select(r => new SelectListItem { Value = r, Text = r })
                     .ToList();
 
-                // Si ya hay una ruta seleccionada, cargar sus sucursales
+                // Si ya hay ruta seleccionada, cargar sus sucursales
                 if (model.RUTA != 0)
                 {
                     var sucursales = await _empDataService.ObtenerSucursales(model.RUTA.ToString());

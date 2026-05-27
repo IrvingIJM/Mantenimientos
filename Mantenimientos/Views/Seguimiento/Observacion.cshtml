@@ -3,13 +3,13 @@
 @{
     bool esNuevo = Model.ID == 0;
     ViewData["Title"] = esNuevo ? "Nueva Observación" : "Editar Observación";
+
     string FormatInput(DateTime? fecha) =>
-    fecha.HasValue && fecha.Value != new DateTime(1900, 1, 1)
-    ? fecha.Value.ToString("yyyy-MM-dd")
-    : string.Empty;
+        fecha.HasValue && fecha.Value != new DateTime(1900, 1, 1)
+        ? fecha.Value.ToString("yyyy-MM-dd")
+        : string.Empty;
 }
 
-<!-- Breadcrumb -->
 <div class="container py-4" style="max-width: 900px;">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
@@ -22,7 +22,6 @@
         </ol>
     </nav>
 
-    <!-- Titulo -->
     <div class="d-flex align-items-center mb-4 gap-3">
         <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-circle p-2">
             <i class="bi bi-arrow-left"></i>
@@ -40,16 +39,14 @@
         </div>
     </div>
 
-    <!-- Formulario -->
     <form asp-action="Observacion" method="post" id="formObservacion" novalidate>
         @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="Id" />
-        <!-- SECCIÓN Datos de Ruta y Sucursal -->
+        <input type="hidden" asp-for="ID" />
+
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header section-header-empresa py-3">
                 <i class="bi bi-building me-2"></i>
-                <strong>Datos de la Empresa</strong>
-                <small class="ms-2 opacity-75">Ruta y Sucursal desde BD corporativa</small>
+                <small class="ms-2 opacity-75">Ruta y Sucursal desde BD</small>
             </div>
             <div class="card-body">
                 <div class="row g-4">
@@ -84,7 +81,7 @@
                             @foreach (var item in Model.SucursalesDisponibles)
                             {
                                 <option value="@item.Value"
-                                    @(item.Value == Model.SUCURSAL? "selected" : "")>
+                                    @(item.Value == Model.SUCURSAL ? "selected" : "")>
                                     @item.Text
                                 </option>
                             }
@@ -95,14 +92,12 @@
             </div>
         </div>
 
-        <!-- SECCIÓN Fechas Estimadas -->
+        <!-- Fechas Estimadas -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header section-header-est py-3">
                 <i class="bi bi-calendar-event me-2"></i>
                 <strong>Fechas Estimadas</strong>
-                <small class="ms-2 opacity-75">
-                    Se cargan automáticamente al seleccionar la sucursal
-                </small>
+                <small class="ms-2 opacity-75">Se cargan automáticamente al seleccionar la sucursal</small>
             </div>
             <div class="card-body">
                 <div class="row g-4">
@@ -137,19 +132,18 @@
                         </div>
                         <small class="text-muted">
                             <i class="bi bi-info-circle me-1"></i>
-                            Si no hay fecha se guardara como 1900-01-01.
                         </small>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- SECCION Fechas reales + Calculo de atraso -->
+        <!-- CAlculo de atraso (se guardan en mttos) -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header section-header-real py-3">
                 <i class="bi bi-calendar-check me-2"></i>
                 <strong>Fechas Reales</strong>
-                <small class="ms-2 opacity-75">Ingresadas por el usuario</small>
+                <small class="ms-2 opacity-75">Ingresadas por el usuario — se guardan en BD mttos</small>
             </div>
             <div class="card-body">
                 <div class="row g-4">
@@ -194,7 +188,6 @@
                                 <div>
                                     <div class="fw-bold fs-5" id="textoDesfase">—</div>
                                     <small class="text-muted" id="subTextoDesfase">
-                                        Diferencia entre Fecha Fin Real y Fecha Fin Estimada
                                     </small>
                                 </div>
                             </div>
@@ -204,7 +197,7 @@
             </div>
         </div>
 
-        <!-- SECCIÓN Observaciones -->
+        <!-- Observaciones -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-white border-bottom py-3">
                 <i class="bi bi-chat-square-text text-primary me-2"></i>
@@ -221,13 +214,12 @@
                           placeholder="Describe el estado del mantenimiento, incidencias encontradas,
                 materiales utilizados, etc."></textarea>
                 <div class="d-flex justify-content-between mt-1">
-                    <small class="text-muted">Máximo 4000 caracteres.</small>
                     <small class="text-muted" id="contadorChars">0 caracteres</small>
                 </div>
             </div>
         </div>
 
-        <!-- Botones -->
+        <!-- Botones de acción -->
         <div class="d-flex gap-3 justify-content-end pt-2">
             <a asp-action="Index" class="btn btn-outline-secondary px-4">
                 <i class="bi bi-x-circle me-1"></i>Cancelar
@@ -245,102 +237,103 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
-            // Calculo de dias desfasados 
-            function calcularDesfase() {
-                const fechaFinEst  = document.getElementById('inputFechaFinEst').value;
-                const fechaFinReal = document.getElementById('inputFechaFinReal').value;
-                const panel = document.getElementById('panelDesfase');
-                const texto = document.getElementById('textoDesfase');
-                const icono = document.getElementById('iconDesfase');
-                if (!fechaFinEst || !fechaFinReal) {
-                    panel.classList.add('d-none');
-                    return;
-                }
-                const est  = new Date(fechaFinEst);
-                const real = new Date(fechaFinReal);
-                const diff = Math.round((real - est) / (1000 * 60 * 60 * 24));
-                panel.classList.remove('d-none', 'desfase-atraso', 'desfase-ok', 'desfase-adelanto');
-                if (diff > 0) {
-                    texto.textContent = `${diff} día(s) de ATRASO`;
-                    panel.classList.add('desfase-atraso');
-                    icono.className = 'bi bi-exclamation-triangle fs-3 text-danger';
-                } else if (diff < 0) {
-                    texto.textContent = `${Math.abs(diff)} día(s) ADELANTADO`;
-                    panel.classList.add('desfase-adelanto');
-                    icono.className = 'bi bi-check-circle fs-3 text-success';
-                } else {
-                    texto.textContent = 'Entregado EN TIEMPO';
-                    panel.classList.add('desfase-ok');
-                    icono.className = 'bi bi-check2-all fs-3 text-success';
-                }
+        // Calculo de dias desfasados
+        function calcularDesfase() {
+            const fechaFinEst  = document.getElementById('inputFechaFinEst').value;
+            const fechaFinReal = document.getElementById('inputFechaFinReal').value;
+            const panel = document.getElementById('panelDesfase');
+            const texto = document.getElementById('textoDesfase');
+            const icono = document.getElementById('iconDesfase');
+
+            if (!fechaFinEst || !fechaFinReal) {
+                panel.classList.add('d-none');
+                return;
             }
+            const est  = new Date(fechaFinEst);
+            const real = new Date(fechaFinReal);
+            const diff = Math.round((real - est) / (1000 * 60 * 60 * 24));
 
-            // Carga dinamica de sucursales
-            document.getElementById('selectRuta').addEventListener('change', async function () {
-                const ruta = this.value;
-                const selSucursal  = document.getElementById('selectSucursal');
-                const inpFechaIni  = document.getElementById('inputFechaIniEst');
-                const inpFechaFin  = document.getElementById('inputFechaFinEst');
+            panel.classList.remove('d-none', 'desfase-atraso', 'desfase-ok', 'desfase-adelanto');
 
-                // Limpiar
-                selSucursal.innerHTML = '<option value="">Cargando sucursales…</option>';
-                selSucursal.disabled  = true;
-                inpFechaIni.value = '';
-                inpFechaFin.value = '';
-                if (!ruta) {
-                    selSucursal.innerHTML = '<option value="">— Selecciona primero una ruta —</option>';
-                    selSucursal.disabled  = false;
-                    return;
-                }
-                try {
-                    const res  = await
-        fetch(`/Seguimiento/ObtenerSucursales?ruta=${encodeURIComponent(ruta)}`);
-                    const data = await res.json();
-                    selSucursal.innerHTML = '<option value="">— Selecciona una sucursal —</option>';
-                    data.forEach(s => {
-                        const opt = document.createElement('option');
-                        opt.value = s;
-                        opt.textContent = s;
-                        selSucursal.appendChild(opt);
-                    });
-                } catch (e) {
-                    console.error('Error al cargar sucursales:', e);
-                    selSucursal.innerHTML = '<option value="">Error al cargar</option>';
-                }
-                selSucursal.disabled = false;
-            });
-
-            // Carga automatica de fechas estimadas
-            document.getElementById('selectSucursal').addEventListener('change', async function () {
-                const ruta = document.getElementById('selectRuta').value;
-                const sucursal = this.value;
-                if (!ruta || !sucursal) return;
-                try {
-                    const url  = `/Seguimiento/ObtenerFechasEstimadas?ruta=${encodeURIComponent(ruta)}&sucursal=${encodeURIComponent(sucursal)}`;
-                    const res  = await fetch(url);
-                    const data = await res.json();
-                    document.getElementById('inputFechaIniEst').value = data.fechaIniEst || '';
-                    document.getElementById('inputFechaFinEst').value = data.fechaFinEst || '';
-
-                    // Recalcular si hay fechas reales
-                    calcularDesfase();
-                } catch (e) {
-                    console.error('Error al cargar fechas estimadas:', e);
-                }
-            });
-
-            // Contador de caracteres
-            const txtObs     = document.getElementById('txtObservaciones');
-            const contador   = document.getElementById('contadorChars');
-            function actualizarContador() {
-                const len = txtObs.value.length;
-                contador.textContent = `${len} caracteres`;
-                contador.className   = len > 3800 ? 'text-danger small' : 'text-muted small';
+            if (diff > 0) {
+                texto.textContent = `${diff} día(s) de ATRASO`;
+                panel.classList.add('desfase-atraso');
+                icono.className = 'bi bi-exclamation-triangle fs-3 text-danger';
+            } else if (diff < 0) {
+                texto.textContent = `${Math.abs(diff)} día(s) ADELANTADO`;
+                panel.classList.add('desfase-adelanto');
+                icono.className = 'bi bi-check-circle fs-3 text-success';
+            } else {
+                texto.textContent = 'EN TIEMPO';
+                panel.classList.add('desfase-ok');
+                icono.className = 'bi bi-check2-all fs-3 text-success';
             }
-            txtObs.addEventListener('input', actualizarContador);
-            actualizarContador();
+        }
 
-            // Calcular al cargar (edicion)
-            window.addEventListener('DOMContentLoaded', calcularDesfase);
+        // Carga dinámica de sucursales al cambiar ruta (BD empresa)
+        document.getElementById('selectRuta').addEventListener('change', async function () {
+            const ruta        = this.value;
+            const selSucursal = document.getElementById('selectSucursal');
+            const inpIni      = document.getElementById('inputFechaIniEst');
+            const inpFin      = document.getElementById('inputFechaFinEst');
+
+            selSucursal.innerHTML = '<option value="">Cargando sucursales…</option>';
+            selSucursal.disabled  = true;
+            inpIni.value = '';
+            inpFin.value = '';
+
+            if (!ruta) {
+                selSucursal.innerHTML = '<option value="">— Selecciona primero una ruta —</option>';
+                selSucursal.disabled  = false;
+                return;
+            }
+            try {
+                const res  = await fetch(`/Seguimiento/ObtenerSucursales?ruta=${encodeURIComponent(ruta)}`);
+                const data = await res.json();
+                selSucursal.innerHTML = '<option value="">— Selecciona una sucursal —</option>';
+                data.forEach(function (s) {
+                    const opt       = document.createElement('option');
+                    opt.value       = s;
+                    opt.textContent = s;
+                    selSucursal.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Error al cargar sucursales:', e);
+                selSucursal.innerHTML = '<option value="">Error al cargar</option>';
+            }
+            selSucursal.disabled = false;
+        });
+
+        // Carga automatica de fechas estimadas al seleccionar sucursal
+        document.getElementById('selectSucursal').addEventListener('change', async function () {
+            const ruta     = document.getElementById('selectRuta').value;
+            const sucursal = this.value;
+            if (!ruta || !sucursal) return;
+            try {
+                const url  = `/Seguimiento/ObtenerFechasEstimadas?ruta=${encodeURIComponent(ruta)}&sucursal=${encodeURIComponent(sucursal)}`;
+                const res  = await fetch(url);
+                const data = await res.json();
+                document.getElementById('inputFechaIniEst').value = data.fechaIniEst || '';
+                document.getElementById('inputFechaFinEst').value = data.fechaFinEst || '';
+                calcularDesfase();
+            } catch (e) {
+                console.error('Error al cargar fechas estimadas:', e);
+            }
+        });
+
+        // Contador de caracteres
+        const txtObs   = document.getElementById('txtObservaciones');
+        const contador = document.getElementById('contadorChars');
+
+        function actualizarContador() {
+            const len      = txtObs.value.length;
+            contador.textContent = `${len} caracteres`;
+            contador.className   = len > 3800 ? 'text-danger small' : 'text-muted small';
+        }
+        txtObs.addEventListener('input', actualizarContador);
+        actualizarContador();
+
+        // Calcular desfase al cargar (modo edición)
+        window.addEventListener('DOMContentLoaded', calcularDesfase);
     </script>
 }

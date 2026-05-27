@@ -30,8 +30,7 @@
             <h1 class="h3 fw-bold text-dark m-0 d-flex align-items-center gap-2">
                 <i class="bi bi-clipboard2-data text-primary"></i>
                 Seguimiento de Mantenimientos
-            </h1>   
-            <p class="text-muted small m-0">Consultar, filtrar y exportar los registros de mantenimiento.</p>
+            </h1>
         </div>
         <div class="col-12 col-sm-auto text-sm-end">
             <a asp-action="Observacion" class="btn btn-primary d-inline-flex align-items-center gap-2 shadow-sm fw-semibold">
@@ -98,7 +97,8 @@
                 </div>
 
                 <div class="d-flex gap-2 mt-4 pt-3 border-top flex-wrap align-items-center">
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm" style="background-color: #1D3557; border-color: #1D3557;">
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm"
+                            style="background-color: #1D3557; border-color: #1D3557;">
                         <i class="bi bi-search me-2"></i>Buscar
                     </button>
 
@@ -125,7 +125,8 @@
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
             <span class="fw-bold text-dark m-0"></span>
-            <span class="badge bg-primary px-3 py-2 rounded-pill fs-6 fw-bold" style="background-color: #1D3557 !important;">
+            <span class="badge bg-primary px-3 py-2 rounded-pill fs-6 fw-bold"
+                  style="background-color: #1D3557 !important;">
                 @Model.Seguimientos.Count registros
             </span>
         </div>
@@ -133,7 +134,7 @@
             <div class="table-responsive">
                 <table class="table table-striped table-hover align-middle mb-0" id="tablaMantenimientos">
                     <thead class="table-dark" style="background-color: #1D3557;">
-                        <tr class="align-middle text-uppercase fs-7" style="font-size: 0.8rem; letter-spacing: 0.5px;">
+                        <tr class="align-middle text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">
                             <th class="ps-4 text-white py-3">Ruta</th>
                             <th class="text-white py-3">Sucursal</th>
                             <th class="text-white py-3">F. Ini. Est.</th>
@@ -195,37 +196,40 @@
                 </table>
             </div>
         </div>
-
-        @if (Model.Seguimientos.Any())
-        {
-            var totalAtrasados = Model.Seguimientos.Count(s => s.DIAS_ATRASO > 0);
-            var totalEnTiempo = Model.Seguimientos.Count(s => s.DIAS_ATRASO <= 0);
-            var promedioAtraso = Model.Seguimientos.Where(s => s.DIAS_ATRASO > 0)
-                                       .Select(s => s.DIAS_ATRASO)
-                                       .DefaultIfEmpty(0)
-                                       .Average();
-        }
     </div>
 </div>
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
-            // Inicializar tooltips de Bootstrap 5
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl)
-            });
+        // Inicializar tooltips de Bootstrap 5
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+            new bootstrap.Tooltip(el);
+        });
 
-            // bBotn para limpiar los filtros
-            $('#btnLimpiar').on('click', function() {
-                // Mandamos los valores a vacío
-                $('#filtroRuta').val("");
-                $('#filtroSucursal').val("");
-                $('#filtroMes').val("");
+        document.getElementById('btnLimpiar').addEventListener('click', function () {
+            window.location.href = window.location.pathname;
+        });
 
-                window.location.href = window.location.pathname;
-            });
+        document.getElementById('filtroRuta').addEventListener('change', async function () {
+            const ruta        = this.value;
+            const selSucursal = document.getElementById('filtroSucursal');
+
+            selSucursal.innerHTML = '<option value="">— Todas las sucursales —</option>';
+
+            if (!ruta) return;
+
+            try {
+                const res  = await fetch(`/Seguimiento/ObtenerSucursalesFiltro?ruta=${encodeURIComponent(ruta)}`);
+                const data = await res.json();
+                data.forEach(function (s) {
+                    const opt       = document.createElement('option');
+                    opt.value       = s;
+                    opt.textContent = s;
+                    selSucursal.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Error al cargar sucursales del filtro:', e);
+            }
         });
     </script>
 }
