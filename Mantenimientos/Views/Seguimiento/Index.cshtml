@@ -6,7 +6,6 @@
 
 @section Styles {
     <style>
-        /* Texto blanco sólo en las áreas oscuras relevantes */
         .seg-seguimiento .card-header,
         .seg-seguimiento .table-dark thead th,
         .seg-seguimiento .badge,
@@ -14,7 +13,6 @@
             color: #ffffff !important;
         }
 
-        /* Si se desea todo el contenido en blanco dentro del contenedor */
         .seg-seguimiento { color: #ffffff; }
     </style>
 }
@@ -75,7 +73,7 @@
             <form asp-action="Index" method="get" id="formFiltros">
                 <div class="row g-3">
                     <div class="col-12 col-md-4">
-                        <label class="form-label fw-bold text-muted small text-uppercase">
+                        <label class="form-label fw-bold text-white small text-uppercase">
                             <i class="bi bi-signpost me-1"></i>Ruta
                         </label>
 
@@ -137,7 +135,7 @@
 
                 <div class="d-flex gap-2 mt-4 pt-3 border-top flex-wrap align-items-center">
                     <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm"
-                            style="background-color: #1D3557; border-color: #1D3557;">
+                            style="text-color: #ffffff background-color: #1D3557; border-color: #1D3557;">
                         <i class="bi bi-search me-2"></i>Buscar
                     </button>
 
