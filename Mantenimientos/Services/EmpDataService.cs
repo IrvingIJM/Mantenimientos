@@ -13,9 +13,9 @@ namespace Mantenimientos.Services
             IConfiguration configuracion,
             ILogger<EmpDataService> logger)
         {
-            _connectionString = configuracion.GetConnectionString("DatabaseConnection")
+            _connectionString = configuracion.GetConnectionString("MttosConnection")
                 ?? throw new InvalidOperationException(
-                    "No se encontró 'DatabaseConnection' en appsettings.json");
+                    "No se encontró 'MttosConnection' en appsettings.json");
             _logger = logger;
         }
 
@@ -28,10 +28,10 @@ namespace Mantenimientos.Services
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
                 const string sql = @"
-                    SELECT DISTINCT CAST(RUTA AS NVARCHAR(50))
-                    FROM iker
+                    SELECT DISTINCT RUTA
+                    FROM Seguimientos
                     WHERE RUTA IS NOT NULL
-                    ORDER BY 1";
+                    ORDER BY RUTA";
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -39,7 +39,7 @@ namespace Mantenimientos.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener rutas desde la BD empresa.");
+                _logger.LogError(ex, "Error al obtener rutas desde la BD.");
             }
             return rutas;
         }
@@ -50,16 +50,19 @@ namespace Mantenimientos.Services
             var sucursales = new List<string>();
             try
             {
+                if (!int.TryParse(ruta, out int rutaInt))
+                    return sucursales;
+
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
                 const string sql = @"
                     SELECT DISTINCT SUCURSAL
-                    FROM iker
+                    FROM Seguimientos
                     WHERE RUTA = @Ruta
                       AND SUCURSAL IS NOT NULL
                     ORDER BY SUCURSAL";
                 await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@Ruta", ruta);
+                cmd.Parameters.AddWithValue("@Ruta", rutaInt);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                     sucursales.Add(reader.GetString(0));
@@ -76,17 +79,20 @@ namespace Mantenimientos.Services
         {
             try
             {
+                if (!int.TryParse(ruta, out int rutaInt))
+                    return null;
+
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
                 const string sql = @"
                     SELECT TOP 1
                         FECHA_INI_ES,
                         FECHA_FIN_ES
-                    FROM mttos
+                    FROM Seguimientos
                     WHERE RUTA     = @Ruta
                       AND SUCURSAL = @Sucursal";
                 await using var cmd = new SqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("@Ruta", ruta);
+                cmd.Parameters.AddWithValue("@Ruta", rutaInt);
                 cmd.Parameters.AddWithValue("@Sucursal", sucursal);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())

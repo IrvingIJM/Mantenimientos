@@ -3,7 +3,7 @@
 <head> 
     <meta charset="utf-8" /> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /> 
-    <title>@ViewData["Title"] — Sistema Mantenimientos Bimbo</title> 
+    <title>@ViewData["Title"] — Sistema Mantenimientos </title> 
  
     <!-- Bootstrap 5.3 --> 
     <link rel="stylesheet" 
@@ -17,16 +17,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" /> 
     <link rel="stylesheet" 
 
-href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swa
-p" /> 
+href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" /> 
  
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />  
 </head> 
  
 <body> 
  
-    <!-- Navbaar --> 
- 
+    <!-- Navbaar -->
     <nav class="navbar navbar-expand-lg navbar-dark bimbo-navbar shadow-sm"> 
         <div class="container-fluid px-4"> 
             <a class="navbar-brand d-flex align-items-center gap-2" href="/"> 
@@ -37,7 +35,7 @@ p" />
                     <span class="fw-bold fs-5">Mantenimientos</span> 
                     <span class="badge bg-warning text-dark ms-1 small">Bimbo</span> 
                 </div> 
-            </a> 
+            </a>
             <button class="navbar-toggler" type="button" 
                     data-bs-toggle="collapse" data-bs-target="#navbarNav"> 
                 <span class="navbar-toggler-icon"></span> 
@@ -45,15 +43,13 @@ p" />
             <div class="collapse navbar-collapse" id="navbarNav"> 
                 <ul class="navbar-nav ms-auto gap-1"> 
                     <li class="nav-item"> 
-                        <a class="nav-link rounded px-3 
-@(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" 
+                        <a class="nav-link rounded px-3 @(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" 
                            asp-controller="Seguimiento" asp-action="Index"> 
                             <i class="bi bi-table me-1"></i>Consulta 
                         </a> 
                     </li> 
                     <li class="nav-item"> 
-                        <a class="nav-link rounded px-3 
-@(ViewContext.RouteData.Values["action"]?.ToString() == "Observacion" ? "active" : "")" 
+                        <a class="nav-link rounded px-3 @(ViewContext.RouteData.Values["action"]?.ToString() == "Observacion" ? "active" : "")" 
                            asp-controller="Seguimiento" asp-action="Observacion"> 
                             <i class="bi bi-plus-circle me-1"></i>Nueva Observación 
                         </a> 
@@ -83,10 +79,9 @@ p" />
     </footer> 
  
     <!-- Scripts --> 
-    <script 
-src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script> 
-    @await RenderSectionAsync("Scripts", required: false) 
+    @await RenderSectionAsync("Scripts", required: false)  
  
 </body>  
 </html> 

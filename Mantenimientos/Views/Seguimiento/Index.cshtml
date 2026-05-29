@@ -4,6 +4,22 @@
     ViewData["Title"] = "Consulta de Mantenimientos";
 }
 
+@section Styles {
+    <style>
+        /* Texto blanco sólo en las áreas oscuras relevantes */
+        .seg-seguimiento .card-header,
+        .seg-seguimiento .table-dark thead th,
+        .seg-seguimiento .badge,
+        .seg-seguimiento .btn.btn-primary {
+            color: #ffffff !important;
+        }
+
+        /* Si se desea todo el contenido en blanco dentro del contenedor */
+        .seg-seguimiento { color: #ffffff; }
+    </style>
+}
+
+
 @functions {
     static string FormatFecha(DateTime? fecha) =>
         (!fecha.HasValue || fecha.Value == new DateTime(1900, 1, 1)) ? "—" : fecha.Value.ToString("dd/MM/yyyy");
@@ -27,13 +43,13 @@
 
     <div class="row align-items-center g-3 mb-4">
         <div class="col-12 col-sm">
-            <h1 class="h3 fw-bold text-dark m-0 d-flex align-items-center gap-2">
+            <h1 class="h3 fw-bold text-black m-0 d-flex align-items-center gap-2">
                 <i class="bi bi-clipboard2-data text-primary"></i>
                 Seguimiento de Mantenimientos
             </h1>
         </div>
         <div class="col-12 col-sm-auto text-sm-end">
-            <a asp-action="Observacion" class="btn btn-primary d-inline-flex align-items-center gap-2 shadow-sm fw-semibold">
+            <a href="@Url.Action("Observacion", "Seguimiento")" class="btn btn-primary d-inline-flex align-items-center gap-2 shadow-sm fw-semibold">
                 <i class="bi bi-plus-circle-fill"></i>
                 Nueva Observación
             </a>
@@ -62,11 +78,19 @@
                         <label class="form-label fw-bold text-muted small text-uppercase">
                             <i class="bi bi-signpost me-1"></i>Ruta
                         </label>
+
                         <select name="filtroRuta" id="filtroRuta" class="form-select border-2">
                             <option value="">— Todas las rutas —</option>
                             @foreach (var item in Model.RutasDisponibles)
                             {
-                                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
                             }
                         </select>
                     </div>
@@ -74,11 +98,19 @@
                         <label class="form-label fw-bold text-muted small text-uppercase">
                             <i class="bi bi-shop me-1"></i>Sucursal
                         </label>
+                       
                         <select name="filtroSucursal" id="filtroSucursal" class="form-select border-2">
                             <option value="">— Todas las sucursales —</option>
                             @foreach (var item in Model.SucursalesDisponibles)
                             {
-                                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
                             }
                         </select>
                     </div>
@@ -90,7 +122,14 @@
                             <option value="">— Todos los meses —</option>
                             @foreach (var item in Model.MesesDisponibles)
                             {
-                                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
                             }
                         </select>
                     </div>
@@ -107,12 +146,11 @@
                     </button>
 
                     <div class="ms-md-auto col-12 col-md-auto text-end mt-2 mt-md-0">
-                        <a asp-action="Exportar"
-                           asp-route-filtroRuta="@Model.FiltroRuta"
-                           asp-route-filtroSucursal="@Model.FiltroSucursal"
-                           asp-route-filtroMes="@Model.FiltroMes"
+                        <a id="btnExportar"
+                           href="@Url.Action("Exportar", "Seguimiento", new { filtroRuta = Model.FiltroRuta, filtroSucursal = Model.FiltroSucursal, filtroMes = Model.FiltroMes })"
+                           role="button"
                            class="btn btn-success d-inline-flex align-items-center gap-2 px-4 fw-semibold shadow-sm"
-                           style="background-color: #2DC653; border-color: #2DC653;">
+                           style="background-color: greenyellow; border-color: black;">
                             <i class="bi bi-file-earmark-excel-fill fs-5"></i>
                             Exportar a Excel
                         </a>
@@ -185,7 +223,8 @@
                                     }
                                 </td>
                                 <td class="text-center">
-                                    <a asp-action="Observacion" asp-route-id="@item.ID"
+                                    <a href="@Url.Action("Observacion", "Seguimiento", new { id = item.ID })"
+                                       role="button" 
                                        class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
                                         <i class="bi bi-pencil me-1"></i>Editar
                                     </a>
@@ -201,34 +240,76 @@
 
 @section Scripts {
     <script>
-        // Inicializar tooltips de Bootstrap 5
-        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
-            new bootstrap.Tooltip(el);
-        });
+        document.addEventListener('DOMContentLoaded', function () {
+            // Inicializar tooltips de Bootstrap 5
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+                new bootstrap.Tooltip(el);
+            });
 
-        document.getElementById('btnLimpiar').addEventListener('click', function () {
-            window.location.href = window.location.pathname;
-        });
+            // Limpiar filtros
+            const btnLimpiar = document.getElementById('btnLimpiar');
+            if (btnLimpiar) {
+                btnLimpiar.addEventListener('click', function () {
+                    const rutaSel = document.getElementById('filtroRuta');
+                    const sucSel = document.getElementById('filtroSucursal');
+                    const mesSel = document.getElementById('filtroMes');
 
-        document.getElementById('filtroRuta').addEventListener('change', async function () {
-            const ruta        = this.value;
-            const selSucursal = document.getElementById('filtroSucursal');
+                    if (rutaSel) rutaSel.value = '';
+                    if (sucSel) sucSel.innerHTML = '<option value="">— Todas las sucursales —</option>';
+                    if (mesSel) mesSel.value = '';
 
-            selSucursal.innerHTML = '<option value="">— Todas las sucursales —</option>';
-
-            if (!ruta) return;
-
-            try {
-                const res  = await fetch(`/Seguimiento/ObtenerSucursalesFiltro?ruta=${encodeURIComponent(ruta)}`);
-                const data = await res.json();
-                data.forEach(function (s) {
-                    const opt       = document.createElement('option');
-                    opt.value       = s;
-                    opt.textContent = s;
-                    selSucursal.appendChild(opt);
+                    // Redirigir a la acción Index sin parámetros
+                    window.location.href = '@Url.Action("Index", "Seguimiento")';
                 });
-            } catch (e) {
-                console.error('Error al cargar sucursales del filtro:', e);
+            }
+
+            // Exportar con filtros actuales
+            const btnExportar = document.getElementById('btnExportar');
+            if (btnExportar) {
+                btnExportar.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const ruta = document.getElementById('filtroRuta')?.value || '';
+                    const sucursal = document.getElementById('filtroSucursal')?.value || '';
+                    const mes = document.getElementById('filtroMes')?.value || '';
+
+                    const params = new URLSearchParams();
+                    if (ruta) params.append('filtroRuta', ruta);
+                    if (sucursal) params.append('filtroSucursal', sucursal);
+                    if (mes) params.append('filtroMes', mes);
+
+                    window.location.href = '/Seguimiento/Exportar?' + params.toString();
+                });
+            }
+
+            // Cargar sucursales dinámicamente al cambiar ruta
+            const filtroRuta = document.getElementById('filtroRuta');
+            if (filtroRuta) {
+                filtroRuta.addEventListener('change', async function () {
+                    const ruta = this.value;
+                    const selSucursal = document.getElementById('filtroSucursal');
+                    if (!selSucursal) return;
+
+                    selSucursal.innerHTML = '<option value="">Cargando...</option>';
+                    if (!ruta) {
+                        selSucursal.innerHTML = '<option value="">— Todas las sucursales —</option>';
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch(`/Seguimiento/ObtenerSucursalesFiltro?ruta=${encodeURIComponent(ruta)}`);
+                        const data = await res.json();
+                        selSucursal.innerHTML = '<option value="">— Todas las sucursales —</option>';
+                        data.forEach(function (s) {
+                            const option = document.createElement('option');
+                            option.value = s;
+                            option.textContent = s;
+                            selSucursal.appendChild(option);
+                        });
+                    } catch (e) {
+                        console.error('Error al cargar sucursales:', e);
+                        selSucursal.innerHTML = '<option value="">— Todas las sucursales —</option>';
+                    }
+                });
             }
         });
     </script>

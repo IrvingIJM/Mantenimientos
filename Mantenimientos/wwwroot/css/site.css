@@ -1,13 +1,13 @@
 /* Variables de color */
 
 :root {
-    --bimbo-azul-oscuro: #1D3557;
-    --bimbo-azul-medio: #457B9D;
-    --bimbo-azul-claro: #A8DADC;
-    --bimbo-blanco: #F1FAEE;
-    --bimbo-rojo: #E63946;
-    --bimbo-verde: #2DC653;
-    --bimbo-gris: #6C757D;
+    --b-azul-oscuro: #1D3557;
+    --b-azul-medio: #457B9D;
+    --b-azul-claro: #A8DADC;
+    --b-blanco: #F1FAEE;
+    --b-rojo: #E63946;
+    --b-verde: #2DC653;
+    --b-gris: #6C757D;
     --shadow-card: 0 2px 12px rgba(29, 53, 87, 0.08);
 }
 
@@ -24,13 +24,13 @@ body {
 
 /* Navbar */
 
-.bimbo-navbar {
-    background: linear-gradient(135deg, var(--bimbo-azul-oscuro) 0%, var(--bimbo-azul-medio) 100%);
-    border-bottom: 3px solid var(--bimbo-rojo);
+.b-navbar {
+    background: linear-gradient(135deg, var(--b-azul-oscuro) 0%, var(--b-azul-medio) 100%);
+    border-bottom: 3px solid var(--b-rojo);
     padding: 0.75rem 0;
 }
 
-    .bimbo-navbar .brand-icon {
+    .b-navbar .brand-icon {
         width: 36px;
         height: 36px;
         background: rgba(255, 255, 255, 0.15);
@@ -42,15 +42,15 @@ body {
         color: white;
     }
 
-    .bimbo-navbar .nav-link {
+    .b-navbar .nav-link {
         color: rgba(255, 255, 255, 0.85) !important;
         font-weight: 500;
         font-size: 0.9rem;
         transition: all 0.2s;
     }
 
-        .bimbo-navbar .nav-link:hover,
-        .bimbo-navbar .nav-link.active {
+        .bo-navbar .nav-link:hover,
+        .b-navbar .nav-link.active {
             color: white !important;
             background: rgba(255, 255, 255, 0.15);
         }
@@ -64,7 +64,7 @@ body {
 
 /* Footer */
 
-.footer-bimbo {
+.footer-b {
     background: #fff;
     border-top: 1px solid #E9ECEF;
 }
@@ -82,7 +82,7 @@ body {
 
 /* Encabezados de secciones del formulario */
 
-.section-header-empresa {
+.section-header-emp {
     background: linear-gradient(90deg, #1D3557 0%, #2C5282 100%);
     color: white;
 }
@@ -100,7 +100,7 @@ body {
 /* Tabla */
 
 .table-header-custom th {
-    background-color: var(--bimbo-azul-oscuro) !important;
+    background-color: var(--b-azul) !important;
     color: #ffffff !important;
     font-size: 0.78rem;
     font-weight: 600;
@@ -191,20 +191,22 @@ body {
 
 .form-control:focus,
 .form-select:focus {
-    border-color: var(--bimbo-azul-medio);
+    border-color: var(--b-azul-medio);
     box-shadow: 0 0 0 3px rgba(69, 123, 157, 0.15);
 }
 
 /* Botones */
 
 .btn-primary {
-    background: var(--bimbo-azul-oscuro);
-    border-color: var(--bimbo-azul-oscuro);
+    background: var(--b-azul-oscuro);
+    border-color: var(--b-azul-oscuro);
 }
 
     .btn-primary:hover {
-        background: var(--bimbo-azul-medio);
-        border-color: var(--bimbo-azul-medio);
+        background: var(--b-azul-medio);
+        border-color: var(--b
+            
+            -azul-medio);
     }
 
 /* Responsive */

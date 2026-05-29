@@ -320,7 +320,7 @@ namespace Mantenimientos.Controllers
         }
 
         // GET  /Seguimiento/ObtenerSucursales?ruta=X
-        // Sucursales desde BD empresa (iker) para Observacion
+        // Sucursales desde BD
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursales(string ruta)
         {
@@ -355,7 +355,7 @@ namespace Mantenimientos.Controllers
         {
             try
             {
-                // Rutas desde BD empresa
+                // Rutas desde BD
                 var rutas = await _empDataService.ObtenerRutasAsync();
                 model.RutasDisponibles = rutas
                     .Select(r => new SelectListItem { Value = r, Text = r })
