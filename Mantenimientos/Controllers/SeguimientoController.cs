@@ -143,7 +143,7 @@ namespace Mantenimientos.Controllers
                     OBSERVACIONES = seguimiento.OBSERVACIONES
                 };
             }
-
+   
             await CargarDropdownAsync(viewModel);
             return View(viewModel);
         }

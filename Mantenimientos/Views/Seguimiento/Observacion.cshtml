@@ -39,40 +39,54 @@
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-12 col-md-6">
-                        <label asp-for="Ruta" class="form-label fw-semibold">
+                        <label asp-for="RUTA" class="form-label fw-semibold">
                             Ruta <span class="text-danger">*</span>
                         </label>
-                        <select asp-for="Ruta"
+                        <select name="RUTA"
                                 class="form-select"
                                 id="selectRuta"
                                 required>
+
                             <option value="">— Selecciona una ruta —</option>
-                            @foreach (var ruta in Model.RutasDisponibles)
+
+                            @foreach (var item in Model.RutasDisponibles)
                             {
-                                <option value="@ruta.Value" selected="@(ruta.Value == Model.RUTA.ToString() ? "selected" : null)">
-                                    @ruta.Text
-                                </option>
+                                if (item.Value == Model.RUTA.ToString())
+                                {
+                                    <option value="@item.Value" selected>
+                                        @item.Text
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">
+                                        @item.Text
+                                    </option>
+                                }
                             }
                         </select>
-                        <span asp-validation-for="Ruta" class="text-danger small"></span>
+                        <span asp-validation-for="RUTA" class="text-danger small"></span>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label asp-for="Sucursal" class="form-label fw-semibold">
+                        <label asp-for="SUCURSAL" class="form-label fw-semibold">
                             Sucursal <span class="text-danger">*</span>
                         </label>
-                        <select asp-for="Sucursal"
+                        <select name="SUCURSAL"
                                 class="form-select"
                                 id="selectSucursal"
                                 required>
                             <option value="">— Selecciona primero una ruta —</option>
                             @foreach (var item in Model.SucursalesDisponibles)
                             {
-                                <option value="@item.Value" selected="@(item.Value == Model.SUCURSAL ? "selected" : null)">
-                                    @item.Text
-                                </option>
+                                if (item.Value == Model.SUCURSAL)
+                                {
+                                    <option value="@item.Value" selected>
+                                        @item.Text
+                                    </option>
+                                }
                             }
                         </select>
-                        <span asp-validation-for="Sucursal" class="text-danger small"></span>
+                        <span asp-validation-for="SUCURSAL" class="text-danger small"></span>
                     </div>
                 </div>
             </div>
@@ -87,14 +101,14 @@
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-12 col-md-6">
-                        <label asp-for="FechaInicioEstimada" class="form-label fw-semibold">
+                        <label asp-for="FECHA_INI_ES" class="form-label fw-semibold">
                             Fecha Inicio
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-light">
                                 <i class="bi bi-calendar-plus text-secondary"></i>
                             </span>
-                            <input asp-for="FechaInicioEstimada"
+                            <input name="FECHA_INI_ES"
                                    type="date"
                                    class="form-control"
                                    id="inputFechaIniEst"
@@ -102,14 +116,14 @@
                         </div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label asp-for="FechaFinEstimada" class="form-label fw-semibold">
+                        <label asp-for="FECHA_FIN_ES" class="form-label fw-semibold">
                             Fecha Fin
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-light">
                                 <i class="bi bi-calendar-minus text-secondary"></i>
                             </span>
-                            <input asp-for="FechaFinEstimada"
+                            <input name="FECHA_FIN_ES"
                                    type="date"
                                    class="form-control"
                                    id="inputFechaFinEst"
@@ -123,7 +137,7 @@
             </div>
         </div>
 
-        <!-- CAlculo de atraso (se guardan en mttos) -->
+        <!-- Calculo de atraso (se guardan en mttos) -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header section-header-real py-3">
                 <i class="bi bi-calendar-check me-2"></i>
@@ -132,14 +146,14 @@
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-12 col-md-6">
-                        <label asp-for="FechaInicioReal" class="form-label fw-semibold">
+                        <label asp-for="FECHA_INI_RE" class="form-label fw-semibold">
                             Fecha Inicio
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-success-subtle">
                                 <i class="bi bi-play-circle text-success"></i>
                             </span>
-                            <input asp-for="FechaInicioReal"
+                            <input name="FECHA_INI_RE"
                                    type="date"
                                    class="form-control"
                                    id="inputFechaIniReal"
@@ -148,14 +162,14 @@
                         </div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label asp-for="FechaFinReal" class="form-label fw-semibold">
-                            Fecha Fin 
+                        <label asp-for="FECHA_FIN_RE" class="form-label fw-semibold">
+                            Fecha Fin
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-success-subtle">
                                 <i class="bi bi-stop-circle text-success"></i>
                             </span>
-                            <input asp-for="FechaFinReal"
+                            <input name="FECHA_FIN_RE"
                                    type="date"
                                    class="form-control"
                                    id="inputFechaFinReal"
@@ -188,14 +202,14 @@
                 <strong>Observaciones</strong>
             </div>
             <div class="card-body">
-                <label asp-for="Observaciones" class="form-label fw-semibold">
+                <label asp-for="OBSERVACIONES" class="form-label fw-semibold">
                     Detalle del mantenimiento
                 </label>
-                <textarea asp-for="Observaciones"
+                <textarea name="OBSERVACIONES"
                           class="form-control"
                           rows="5"
                           id="txtObservaciones"
-                          placeholder="Describe el estado del mantenimiento. "></textarea>
+                          placeholder="Describe el estado del mantenimiento.">@Model.OBSERVACIONES</textarea>
                 <div class="d-flex justify-content-between mt-1">
                     <small class="text-muted" id="contadorChars">0 caracteres</small>
                 </div>

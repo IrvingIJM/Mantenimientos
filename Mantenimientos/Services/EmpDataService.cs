@@ -35,11 +35,12 @@ namespace Mantenimientos.Services
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
-                    rutas.Add(reader.GetString(0));
+                    rutas.Add(reader[0].ToString()!);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener rutas desde la BD.");
+                throw;
             }
             return rutas;
         }
