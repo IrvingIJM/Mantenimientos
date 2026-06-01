@@ -88,7 +88,7 @@
                 <div class="row g-4">
                     <div class="col-12 col-md-6">
                         <label asp-for="FechaInicioEstimada" class="form-label fw-semibold">
-                            Fecha Inicio Estimada
+                            Fecha Inicio
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-light">
@@ -103,7 +103,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label asp-for="FechaFinEstimada" class="form-label fw-semibold">
-                            Fecha Fin Estimada
+                            Fecha Fin
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-light">
@@ -133,7 +133,7 @@
                 <div class="row g-4">
                     <div class="col-12 col-md-6">
                         <label asp-for="FechaInicioReal" class="form-label fw-semibold">
-                            Fecha Inicio Real
+                            Fecha Inicio
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-success-subtle">
@@ -149,7 +149,7 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label asp-for="FechaFinReal" class="form-label fw-semibold">
-                            Fecha Fin Real
+                            Fecha Fin 
                         </label>
                         <div class="input-group">
                             <span class="input-group-text bg-success-subtle">
@@ -195,8 +195,7 @@
                           class="form-control"
                           rows="5"
                           id="txtObservaciones"
-                          placeholder="Describe el estado del mantenimiento, incidencias encontradas,
-                materiales utilizados, etc."></textarea>
+                          placeholder="Describe el estado del mantenimiento. "></textarea>
                 <div class="d-flex justify-content-between mt-1">
                     <small class="text-muted" id="contadorChars">0 caracteres</small>
                 </div>
@@ -214,7 +213,6 @@
             </button>
         </div>
     </form>
-</div>
 
 @section Scripts {
     @{
@@ -254,7 +252,7 @@
             }
         }
 
-        // Carga dinámica de sucursales al cambiar ruta (BD empresa)
+        // Carga dinámica de sucursales al cambiar ruta bd
         document.getElementById('selectRuta').addEventListener('change', async function () {
             const ruta        = this.value;
             const selSucursal = document.getElementById('selectSucursal');

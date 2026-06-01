@@ -13,7 +13,7 @@ namespace Mantenimientos.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20260527232145_dbupdate")]
-    partial class dbupdate
+    partial class DbUpdate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
