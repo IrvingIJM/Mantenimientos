@@ -32,7 +32,32 @@ namespace Mantenimientos.Controllers
             int? filtroMes,
             int? filtroAnio)
         {
-            var query = _context.Seguimientos.AsQueryable();
+            string querySQL = @"
+                SELECT 
+                    s.ID, 
+                    s.RUTA, 
+                    s.SUCURSAL, 
+                    s.FECHA_INI_ES, 
+                    s.FECHA_FIN_ES, 
+                    CASE WHEN o.F_Inicio <= '1900-01-01' THEN NULL ELSE o.F_Inicio END AS FECHA_INI_RE, 
+                    CASE WHEN o.F_Termino <= '1900-01-01' THEN NULL ELSE o.F_Termino END AS FECHA_FIN_RE, 
+                    CASE 
+                        WHEN s.FECHA_FIN_ES IS NULL THEN NULL
+                        WHEN o.F_Termino IS NULL OR o.F_Termino <= '1900-01-01' THEN NULL
+                        ELSE DATEDIFF(day, o.F_Termino, s.FECHA_FIN_ES)
+                    END AS DIAS_ATRASO, 
+                    s.OBSERVACIONES
+                FROM mttos.dbo.Seguimientos AS s
+                LEFT JOIN (
+                    SELECT 
+                        SUCURSAL,
+                        F_Inicio,
+                        F_Termino,
+                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL ORDER BY F_Inicio DESC) as fila
+                    FROM Iker.dbo.DBICET
+                ) AS o ON s.SUCURSAL = o.SUCURSAL AND o.fila = 1
+            ";
+            var query = _context.Seguimientos.FromSqlRaw(querySQL);
 
             if (filtroRuta.HasValue)
                 query = query.Where(s => s.RUTA == filtroRuta.Value);
@@ -42,13 +67,13 @@ namespace Mantenimientos.Controllers
 
             if (filtroMes.HasValue)
                 query = query.Where(s =>
-                    s.FECHA_INI_ES.HasValue &&
-                    s.FECHA_INI_ES.Value.Month == filtroMes.Value);
+                    s.FECHA_INI_RE.HasValue &&
+                    s.FECHA_INI_RE.Value.Month == filtroMes.Value);
 
             if (filtroAnio.HasValue)
                 query = query.Where(s =>
-                    s.FECHA_INI_ES.HasValue &&
-                    s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
+                    s.FECHA_INI_RE.HasValue &&
+                    s.FECHA_INI_RE.Value.Year == filtroAnio.Value);
 
             var seguimientos = await query
                 .OrderBy(s => s.RUTA)
@@ -67,7 +92,7 @@ namespace Mantenimientos.Controllers
                 })
                 .ToListAsync();
 
-            // Rutas disponibles (desde la BD de mttos)
+            // Listas para los dropdowns de los filtros
             var todasRutas = await _context.Seguimientos
                 .Select(r => r.RUTA)
                 .Distinct()
@@ -92,6 +117,16 @@ namespace Mantenimientos.Controllers
                 })
                 .ToList();
 
+            var aniosDisponibles = Enumerable.Range(2023, (DateTime.Now.Year - 2023) + 1)
+                .OrderByDescending(a => a)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.ToString(),
+                    Text = a.ToString(),
+                    Selected = filtroAnio.HasValue && a == filtroAnio.Value
+                })
+                .ToList();
+
             var viewModel = new IndexVM
             {
                 Seguimientos = seguimientos,
@@ -99,24 +134,46 @@ namespace Mantenimientos.Controllers
                 FiltroSucursal = filtroSucursal,
                 FiltroMes = filtroMes,
                 FiltroAnio = filtroAnio,
-                RutasDisponibles = todasRutas
-                    .Select(r => new SelectListItem
-                    {
-                        Value = r.ToString(),
-                        Text = r.ToString(),
-                        Selected = filtroRuta.HasValue && r == filtroRuta.Value
-                    }).ToList(),
-                SucursalesDisponibles = todasSucursales
-                    .Select(s => new SelectListItem
-                    {
-                        Value = s,
-                        Text = s,
-                        Selected = s == filtroSucursal
-                    }).ToList(),
-                MesesDisponibles = meses
+                RutasDisponibles = todasRutas.Select(r => new SelectListItem { Value = r.ToString(), Text = r.ToString(), Selected = filtroRuta.HasValue && r == filtroRuta.Value }).ToList(),
+                SucursalesDisponibles = todasSucursales.Select(s => new SelectListItem { Value = s, Text = s, Selected = s == filtroSucursal }).ToList(),
+                MesesDisponibles = meses,
+                AniosDisponibles = aniosDisponibles
             };
 
             return View(viewModel);
+        }
+
+        // POST /Seguimiento/Sincronizar
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Sincronizar()
+        {
+            string sqlQuery = @"
+                UPDATE destino
+                SET 
+                    destino.FECHA_INI_RE = origen.F_Inicio,
+                    destino.FECHA_FIN_RE = origen.F_Termino,
+                    destino.DIAS_ATRASO = DATEDIFF(day, destino.FECHA_FIN_ES, origen.F_Termino)
+                FROM mttos.dbo.Seguimientos AS destino
+                INNER JOIN Iker.dbo.DBICET AS origen 
+                    ON destino.SUCURSAL = origen.SUCURSAL;
+            ";
+
+            try
+            {
+                int registrosActualizados = await _context.Database.ExecuteSqlRawAsync(sqlQuery);
+
+                TempData["Mensaje"] = $"¡Sincronización exitosa! Se actualizaron {registrosActualizados} registros cruzando la base de datos 'Iker'.";
+                TempData["TipoAlerta"] = "success";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al sincronizar entre las bases de datos mttos e Iker.");
+                TempData["Mensaje"] = "Error al sincronizar. Asegúrate de que tu usuario de conexión tenga permisos de lectura en la base de datos 'Iker'.";
+                TempData["TipoAlerta"] = "danger";
+            }
+
+            return RedirectToAction(nameof(Index));
         }
 
         // GET  /Seguimiento/Observacion/{id?}
@@ -143,7 +200,7 @@ namespace Mantenimientos.Controllers
                     OBSERVACIONES = seguimiento.OBSERVACIONES
                 };
             }
-   
+
             await CargarDropdownAsync(viewModel);
             return View(viewModel);
         }
@@ -159,14 +216,12 @@ namespace Mantenimientos.Controllers
                 return View(model);
             }
 
-            // Calcular días de atraso
             int diasDesfasados = 0;
             if (model.FECHA_FIN_RE.HasValue && model.FECHA_FIN_ES.HasValue)
                 diasDesfasados = (int)(model.FECHA_FIN_RE.Value - model.FECHA_FIN_ES.Value).TotalDays;
 
             try
             {
-                // edición por ID
                 if (model.ID == 0)
                 {
                     var nuevo = new Seguimiento
@@ -187,7 +242,6 @@ namespace Mantenimientos.Controllers
                 }
                 else
                 {
-                
                     var existente = await _context.Seguimientos.FindAsync(model.ID);
                     if (existente is null)
                         return NotFound();
@@ -223,9 +277,37 @@ namespace Mantenimientos.Controllers
         public async Task<IActionResult> Exportar(
             int? filtroRuta,
             string? filtroSucursal,
-            int? filtroMes)
+            int? filtroMes,
+            int? filtroAnio)
         {
-            var query = _context.Seguimientos.AsQueryable();
+            // CORRECCIÓN: Usamos exactamente el mismo query SQL que en el Index para jalar datos de Iker.dbo.DBICET
+            string querySQL = @"
+                SELECT 
+                    s.ID, 
+                    s.RUTA, 
+                    s.SUCURSAL, 
+                    s.FECHA_INI_ES, 
+                    s.FECHA_FIN_ES, 
+                    CASE WHEN o.F_Inicio <= '1900-01-01' THEN NULL ELSE o.F_Inicio END AS FECHA_INI_RE, 
+                    CASE WHEN o.F_Termino <= '1900-01-01' THEN NULL ELSE o.F_Termino END AS FECHA_FIN_RE, 
+                    CASE 
+                        WHEN s.FECHA_FIN_ES IS NULL THEN NULL
+                        WHEN o.F_Termino IS NULL OR o.F_Termino <= '1900-01-01' THEN NULL
+                        ELSE DATEDIFF(day, o.F_Termino, s.FECHA_FIN_ES)
+                    END AS DIAS_ATRASO, 
+                    s.OBSERVACIONES
+                FROM mttos.dbo.Seguimientos AS s
+                LEFT JOIN (
+                    SELECT 
+                        SUCURSAL,
+                        F_Inicio,
+                        F_Termino,
+                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL ORDER BY F_Inicio DESC) as fila
+                    FROM Iker.dbo.DBICET
+                ) AS o ON s.SUCURSAL = o.SUCURSAL AND o.fila = 1
+            ";
+
+            var query = _context.Seguimientos.FromSqlRaw(querySQL);
 
             if (filtroRuta.HasValue)
                 query = query.Where(s => s.RUTA == filtroRuta.Value);
@@ -235,8 +317,13 @@ namespace Mantenimientos.Controllers
 
             if (filtroMes.HasValue)
                 query = query.Where(s =>
-                    s.FECHA_INI_ES.HasValue &&
-                    s.FECHA_INI_ES.Value.Month == filtroMes.Value);
+                    s.FECHA_INI_RE.HasValue &&
+                    s.FECHA_INI_RE.Value.Month == filtroMes.Value);
+
+            if (filtroAnio.HasValue)
+                query = query.Where(s =>
+                    s.FECHA_INI_RE.HasValue &&
+                    s.FECHA_INI_RE.Value.Year == filtroAnio.Value);
 
             var datos = await query
                 .OrderBy(s => s.RUTA)
@@ -246,7 +333,6 @@ namespace Mantenimientos.Controllers
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
 
-            // Encabezados de columnas
             string[] encabezados =
             {
                 "Ruta", "Sucursal",
@@ -268,7 +354,6 @@ namespace Mantenimientos.Controllers
                     .Border.SetOutsideBorderColor(XLColor.White);
             }
 
-            // Filas de datos
             for (int i = 0; i < datos.Count; i++)
             {
                 var s = datos[i];
@@ -295,7 +380,6 @@ namespace Mantenimientos.Controllers
                     hoja.Cell(row, 7).Style.Font.SetFontColor(XLColor.DarkGreen).Font.SetBold(true);
             }
 
-            // Guardar y devolver el archivo Excel
             using var ms = new System.IO.MemoryStream();
             workbook.SaveAs(ms);
             ms.Seek(0, System.IO.SeekOrigin.Begin);
@@ -305,7 +389,6 @@ namespace Mantenimientos.Controllers
         }
 
         // GET  /Seguimiento/ObtenerSucursalesFiltro?ruta=X
-        // Sucursales registradas en mttos para el filtro del Index
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
         {
@@ -320,7 +403,6 @@ namespace Mantenimientos.Controllers
         }
 
         // GET  /Seguimiento/ObtenerSucursales?ruta=X
-        // Sucursales desde BD
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursales(string ruta)
         {
@@ -350,18 +432,15 @@ namespace Mantenimientos.Controllers
             });
         }
 
-        // Auxiliares privados
         private async Task CargarDropdownAsync(ObservacionVM model)
         {
             try
             {
-                // Rutas desde BD
                 var rutas = await _empDataService.ObtenerRutasAsync();
                 model.RutasDisponibles = rutas
                     .Select(r => new SelectListItem { Value = r, Text = r })
                     .ToList();
 
-                // Si ya hay ruta seleccionada, cargar sus sucursales
                 if (model.RUTA != 0)
                 {
                     var sucursales = await _empDataService.ObtenerSucursales(model.RUTA.ToString());

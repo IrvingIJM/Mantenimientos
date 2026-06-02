@@ -4,37 +4,9 @@
     ViewData["Title"] = "Consulta de Mantenimientos";
 }
 
-@section Styles {
-    <style>
-        .seg-seguimiento .card-header,
-        .seg-seguimiento .table-dark thead th,
-        .seg-seguimiento .badge,
-        .seg-seguimiento .btn.btn-primary {
-            color: #ffffff !important;
-        }
-
-        .seg-seguimiento { color: #ffffff; }
-    </style>
-}
-
-
 @functions {
     static string FormatFecha(DateTime? fecha) =>
         (!fecha.HasValue || fecha.Value == new DateTime(1900, 1, 1)) ? "—" : fecha.Value.ToString("dd/MM/yyyy");
-
-    static string ClaseDias(int dias)
-    {
-        if (dias > 0) return "badge bg-danger text-white fs-7";
-        if (dias < 0) return "badge bg-success text-white fs-7";
-        return "badge bg-secondary text-white fs-7";
-    }
-
-    static string TextoDias(int dias)
-    {
-        if (dias > 0) return $"-{dias} días";
-        if (dias < 0) return $"{dias} días";
-        return "En tiempo";
-    }
 }
 
 <div class="container-fluid py-4 px-3">
@@ -72,11 +44,10 @@
         <div class="card-body bg-light-subtle">
             <form asp-action="Index" method="get" id="formFiltros">
                 <div class="row g-3">
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-bold text-white small text-uppercase">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase">
                             <i class="bi bi-signpost me-1"></i>Ruta
                         </label>
-
                         <select name="filtroRuta" id="filtroRuta" class="form-select border-2">
                             <option value="">— Todas las rutas —</option>
                             @foreach (var item in Model.RutasDisponibles)
@@ -92,11 +63,10 @@
                             }
                         </select>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">
                             <i class="bi bi-shop me-1"></i>Sucursal
                         </label>
-                       
                         <select name="filtroSucursal" id="filtroSucursal" class="form-select border-2">
                             <option value="">— Todas las sucursales —</option>
                             @foreach (var item in Model.SucursalesDisponibles)
@@ -112,7 +82,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">
                             <i class="bi bi-calendar3 me-1"></i>Mes
                         </label>
@@ -131,11 +101,30 @@
                             }
                         </select>
                     </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase">
+                            <i class="bi bi-calendar-event me-1"></i>Año
+                        </label>
+                        <select name="filtroAnio" id="filtroAnio" class="form-select border-2">
+                            <option value="">— Todos los años —</option>
+                            @foreach (var item in Model.AniosDisponibles)
+                            {
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
                 </div>
 
                 <div class="d-flex gap-2 mt-4 pt-3 border-top flex-wrap align-items-center">
                     <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm"
-                            style="background-color: white; border-color: #1D3557;">
+                            style="background-color: white; border-color: #1D3557; color: #1D3557;">
                         <i class="bi bi-search me-2"></i>Buscar
                     </button>
 
@@ -145,10 +134,10 @@
 
                     <div class="ms-md-auto col-12 col-md-auto text-end mt-2 mt-md-0">
                         <a id="btnExportar"
-                           href="@Url.Action("Exportar", "Seguimiento", new { filtroRuta = Model.FiltroRuta, filtroSucursal = Model.FiltroSucursal, filtroMes = Model.FiltroMes })"
+                           href="@Url.Action("Exportar", "Seguimiento", new { filtroRuta = Model.FiltroRuta, filtroSucursal = Model.FiltroSucursal, filtroMes = Model.FiltroMes, filtroAnio = Model.FiltroAnio })"
                            role="button"
                            class="btn btn-success d-inline-flex align-items-center gap-2 px-4 fw-semibold shadow-sm"
-                           style="background-color: greenyellow; border-color: black;">
+                           style="background-color: greenyellow; border-color: black; color: black;">
                             <i class="bi bi-file-earmark-excel-fill fs-5"></i>
                             Exportar a Excel
                         </a>
@@ -195,7 +184,13 @@
                         }
                         @foreach (var item in Model.Seguimientos)
                         {
-                            var esAtrasado = item.DIAS_ATRASO > 0;
+                            var noTieneEstimadas = item.FECHA_INI_ES == null || item.FECHA_INI_ES == new DateTime(1900, 1, 1) ||
+                                                   item.FECHA_FIN_ES == null || item.FECHA_FIN_ES == new DateTime(1900, 1, 1);
+
+                            var noTieneFinReal = item.FECHA_FIN_RE == null || item.FECHA_FIN_RE == new DateTime(1900, 1, 1);
+
+                            var esAtrasado = !noTieneEstimadas && !noTieneFinReal && item.DIAS_ATRASO > 0;
+
                             <tr class="@(esAtrasado ? "table-danger-subtle" : "")">
                                 <td class="ps-4 fw-bold text-primary">@item.RUTA</td>
                                 <td class="fw-semibold text-dark">@item.SUCURSAL</td>
@@ -204,25 +199,49 @@
                                 <td class="fw-medium">@FormatFecha(item.FECHA_INI_RE)</td>
                                 <td class="fw-medium">@FormatFecha(item.FECHA_FIN_RE)</td>
                                 <td class="text-center">
-                                    <span class="@ClaseDias(item.DIAS_ATRASO) rounded-pill px-3 py-1 fw-bold">
-                                        @TextoDias(item.DIAS_ATRASO)
-                                    </span>
+                                    @if (noTieneEstimadas)
+                                    {
+                                        <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold fs-7">No programado</span>
+                                    }
+                                    else if (item.FECHA_INI_RE == null || item.FECHA_INI_RE == new DateTime(1900, 1, 1))
+                                    {
+                                        <span class="badge bg-secondary text-white rounded-pill px-3 py-1 fw-bold fs-7">No iniciado</span>
+                                    }
+                                    else if (noTieneFinReal)
+                                    {
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold fs-7" style="background-color: grey !important;">En proceso</span>
+                                    }
+                                    else
+                                    {
+                                        if (item.DIAS_ATRASO > 0)
+                                        {
+                                            <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold fs-7">-@item.DIAS_ATRASO días</span>
+                                        }
+                                        else if (item.DIAS_ATRASO < 0)
+                                        {
+                                            <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold fs-7">@item.DIAS_ATRASO días</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold fs-7">En tiempo</span>
+                                        }
+                                    }
                                 </td>
                                 <td class="text-secondary small text-truncate" style="max-width: 250px;">
                                     @if (!string.IsNullOrWhiteSpace(item.OBSERVACIONES))
                                     {
-                                        <span data-bs-toggle="tooltip" data-bs-placement="top" title="@item.OBSERVACIONES">
+                                        <span class="text-wrap" data-bs-toggle="tooltip" data-bs-placement="top" title="@item.OBSERVACIONES">
                                             @item.OBSERVACIONES
                                         </span>
                                     }
                                     else
                                     {
-                                        <em class="text-muted opacity-50">Sin observaciones</em>
+                                        <em class="text-muted opacity-50"> </em>
                                     }
                                 </td>
                                 <td class="text-center">
                                     <a href="@Url.Action("Observacion", "Seguimiento", new { id = item.ID })"
-                                       role="button" 
+                                       role="button"
                                        class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
                                         <i class="bi bi-pencil me-1"></i>Editar
                                     </a>
@@ -251,10 +270,12 @@
                     const rutaSel = document.getElementById('filtroRuta');
                     const sucSel = document.getElementById('filtroSucursal');
                     const mesSel = document.getElementById('filtroMes');
+                    const anioSel = document.getElementById('filtroAnio');
 
                     if (rutaSel) rutaSel.value = '';
                     if (sucSel) sucSel.innerHTML = '<option value="">— Todas las sucursales —</option>';
                     if (mesSel) mesSel.value = '';
+                    if (anioSel) anioSel.value = '';
 
                     // Redirigir a la acción Index sin parámetros
                     window.location.href = '@Url.Action("Index", "Seguimiento")';
@@ -269,11 +290,13 @@
                     const ruta = document.getElementById('filtroRuta')?.value || '';
                     const sucursal = document.getElementById('filtroSucursal')?.value || '';
                     const mes = document.getElementById('filtroMes')?.value || '';
+                    const anio = document.getElementById('filtroAnio')?.value || '';
 
                     const params = new URLSearchParams();
                     if (ruta) params.append('filtroRuta', ruta);
                     if (sucursal) params.append('filtroSucursal', sucursal);
                     if (mes) params.append('filtroMes', mes);
+                    if (anio) params.append('filtroAnio', anio);
 
                     window.location.href = '/Seguimiento/Exportar?' + params.toString();
                 });

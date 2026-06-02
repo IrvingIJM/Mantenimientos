@@ -4,10 +4,10 @@ namespace Mantenimientos.Models.ViewModels
 {
     public class IndexVM
     {
-        //Lista de resultados
+        // Lista de resultados
         public List<SeguimientoViewModel> Seguimientos { get; set; } = new();
 
-        //Fltros
+        // Filtros
         public int? FiltroRuta { get; set; }
         public int? FiltroMes { get; set; }
         public int? FiltroAnio { get; set; }
@@ -16,6 +16,7 @@ namespace Mantenimientos.Models.ViewModels
         public List<SelectListItem> RutasDisponibles { get; set; } = new();
         public List<SelectListItem> SucursalesDisponibles { get; set; } = new();
         public List<SelectListItem> MesesDisponibles { get; set; } = new();
+        public List<SelectListItem> AniosDisponibles { get; set; } = new();
     }
 
     public class SeguimientoViewModel
