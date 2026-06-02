@@ -32,32 +32,41 @@ namespace Mantenimientos.Controllers
             int? filtroMes,
             int? filtroAnio)
         {
-            string querySQL = @"
-                SELECT 
-                    s.ID, 
-                    s.RUTA, 
-                    s.SUCURSAL, 
-                    s.FECHA_INI_ES, 
-                    s.FECHA_FIN_ES, 
-                    CASE WHEN o.F_Inicio <= '1900-01-01' THEN NULL ELSE o.F_Inicio END AS FECHA_INI_RE, 
-                    CASE WHEN o.F_Termino <= '1900-01-01' THEN NULL ELSE o.F_Termino END AS FECHA_FIN_RE, 
-                    CASE 
-                        WHEN s.FECHA_FIN_ES IS NULL THEN NULL
-                        WHEN o.F_Termino IS NULL OR o.F_Termino <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, o.F_Termino, s.FECHA_FIN_ES)
-                    END AS DIAS_ATRASO, 
-                    s.OBSERVACIONES
-                FROM mttos.dbo.Seguimientos AS s
-                LEFT JOIN (
+            filtroAnio ??= DateTime.Now.Year;
+
+            string sqlUpdate = @"
+                WITH UltimosMovimientos AS (
                     SELECT 
                         SUCURSAL,
                         F_Inicio,
                         F_Termino,
                         ROW_NUMBER() OVER (PARTITION BY SUCURSAL ORDER BY F_Inicio DESC) as fila
                     FROM Iker.dbo.DBICET
-                ) AS o ON s.SUCURSAL = o.SUCURSAL AND o.fila = 1
+                )
+                UPDATE destino
+                SET 
+                    destino.FECHA_INI_RE = CASE WHEN origen.F_Inicio <= '1900-01-01' THEN NULL ELSE origen.F_Inicio END,
+                    destino.FECHA_FIN_RE = CASE WHEN origen.F_Termino <= '1900-01-01' THEN NULL ELSE origen.F_Termino END,
+                    destino.DIAS_ATRASO = CASE 
+                        WHEN destino.FECHA_FIN_ES IS NULL THEN NULL
+                        WHEN origen.F_Termino IS NULL OR origen.F_Termino <= '1900-01-01' THEN NULL
+                        ELSE DATEDIFF(day, destino.FECHA_FIN_ES, origen.F_Termino)
+                    END
+                FROM mttos.dbo.Seguimientos AS destino
+                INNER JOIN UltimosMovimientos AS origen ON destino.SUCURSAL = origen.SUCURSAL
+                WHERE origen.fila = 1;
             ";
-            var query = _context.Seguimientos.FromSqlRaw(querySQL);
+
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync(sqlUpdate);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en la sincronización automática del Index.");
+            }
+
+            var query = _context.Seguimientos.AsQueryable();
 
             if (filtroRuta.HasValue)
                 query = query.Where(s => s.RUTA == filtroRuta.Value);
@@ -66,14 +75,10 @@ namespace Mantenimientos.Controllers
                 query = query.Where(s => s.SUCURSAL == filtroSucursal);
 
             if (filtroMes.HasValue)
-                query = query.Where(s =>
-                    s.FECHA_INI_RE.HasValue &&
-                    s.FECHA_INI_RE.Value.Month == filtroMes.Value);
+                query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Month == filtroMes.Value);
 
             if (filtroAnio.HasValue)
-                query = query.Where(s =>
-                    s.FECHA_INI_RE.HasValue &&
-                    s.FECHA_INI_RE.Value.Year == filtroAnio.Value);
+                query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Year == filtroAnio.Value);
 
             var seguimientos = await query
                 .OrderBy(s => s.RUTA)
@@ -92,7 +97,6 @@ namespace Mantenimientos.Controllers
                 })
                 .ToListAsync();
 
-            // Listas para los dropdowns de los filtros
             var todasRutas = await _context.Seguimientos
                 .Select(r => r.RUTA)
                 .Distinct()
@@ -143,39 +147,6 @@ namespace Mantenimientos.Controllers
             return View(viewModel);
         }
 
-        // POST /Seguimiento/Sincronizar
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Sincronizar()
-        {
-            string sqlQuery = @"
-                UPDATE destino
-                SET 
-                    destino.FECHA_INI_RE = origen.F_Inicio,
-                    destino.FECHA_FIN_RE = origen.F_Termino,
-                    destino.DIAS_ATRASO = DATEDIFF(day, destino.FECHA_FIN_ES, origen.F_Termino)
-                FROM mttos.dbo.Seguimientos AS destino
-                INNER JOIN Iker.dbo.DBICET AS origen 
-                    ON destino.SUCURSAL = origen.SUCURSAL;
-            ";
-
-            try
-            {
-                int registrosActualizados = await _context.Database.ExecuteSqlRawAsync(sqlQuery);
-
-                TempData["Mensaje"] = $"¡Sincronización exitosa! Se actualizaron {registrosActualizados} registros cruzando la base de datos 'Iker'.";
-                TempData["TipoAlerta"] = "success";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al sincronizar entre las bases de datos mttos e Iker.");
-                TempData["Mensaje"] = "Error al sincronizar. Asegúrate de que tu usuario de conexión tenga permisos de lectura en la base de datos 'Iker'.";
-                TempData["TipoAlerta"] = "danger";
-            }
-
-            return RedirectToAction(nameof(Index));
-        }
-
         // GET  /Seguimiento/Observacion/{id?}
         [HttpGet]
         public async Task<IActionResult> Observacion(int? id)
@@ -203,6 +174,39 @@ namespace Mantenimientos.Controllers
 
             await CargarDropdownAsync(viewModel);
             return View(viewModel);
+        }
+
+        // POST /Seguimiento/Importar
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Importar()
+        {
+            string sqlQuery = @"
+                    INSERT INTO mttos.dbo.Seguimientos (RUTA, SUCURSAL)
+                    SELECT origen.RUTA, origen.Sucursal 
+                    FROM Iker.dbo.Sucursales AS origen
+                    WHERE NOT EXISTS (
+                        SELECT 1 
+                        FROM mttos.dbo.Seguimientos AS destino 
+                        WHERE destino.SUCURSAL = origen.SUCURSAL
+                    );
+                ";
+
+            try
+            {
+                int registrosInsertados = await _context.Database.ExecuteSqlRawAsync(sqlQuery);
+
+                TempData["Mensaje"] = $"¡Importación exitosa! Se agregaron {registrosInsertados} nuevas sucursales desde la base de datos 'Iker'.";
+                TempData["TipoAlerta"] = "success";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al importar sucursales desde Iker.dbo.Sucursales");
+                TempData["Mensaje"] = "Error al importar sucursales. Verifica que los nombres de las columnas en Iker.dbo.Sucursales sean correctos.";
+                TempData["TipoAlerta"] = "danger";
+            }
+
+            return RedirectToAction(nameof(Index));
         }
 
         // POST /Seguimiento/Observacion
@@ -280,34 +284,43 @@ namespace Mantenimientos.Controllers
             int? filtroMes,
             int? filtroAnio)
         {
-            // CORRECCIÓN: Usamos exactamente el mismo query SQL que en el Index para jalar datos de Iker.dbo.DBICET
-            string querySQL = @"
-                SELECT 
-                    s.ID, 
-                    s.RUTA, 
-                    s.SUCURSAL, 
-                    s.FECHA_INI_ES, 
-                    s.FECHA_FIN_ES, 
-                    CASE WHEN o.F_Inicio <= '1900-01-01' THEN NULL ELSE o.F_Inicio END AS FECHA_INI_RE, 
-                    CASE WHEN o.F_Termino <= '1900-01-01' THEN NULL ELSE o.F_Termino END AS FECHA_FIN_RE, 
-                    CASE 
-                        WHEN s.FECHA_FIN_ES IS NULL THEN NULL
-                        WHEN o.F_Termino IS NULL OR o.F_Termino <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, o.F_Termino, s.FECHA_FIN_ES)
-                    END AS DIAS_ATRASO, 
-                    s.OBSERVACIONES
-                FROM mttos.dbo.Seguimientos AS s
-                LEFT JOIN (
+            // CAMBIO 3: También aseguramos el año por defecto al exportar a Excel
+            filtroAnio ??= DateTime.Now.Year;
+
+            // CAMBIO 4: Invertimos el DATEDIFF aquí también para el reporte de Excel
+            string sqlUpdate = @"
+                WITH UltimosMovimientos AS (
                     SELECT 
                         SUCURSAL,
                         F_Inicio,
                         F_Termino,
                         ROW_NUMBER() OVER (PARTITION BY SUCURSAL ORDER BY F_Inicio DESC) as fila
                     FROM Iker.dbo.DBICET
-                ) AS o ON s.SUCURSAL = o.SUCURSAL AND o.fila = 1
+                )
+                UPDATE destino
+                SET 
+                    destino.FECHA_INI_RE = CASE WHEN origen.F_Inicio <= '1900-01-01' THEN NULL ELSE origen.F_Inicio END,
+                    destino.FECHA_FIN_RE = CASE WHEN origen.F_Termino <= '1900-01-01' THEN NULL ELSE origen.F_Termino END,
+                    destino.DIAS_ATRASO = CASE 
+                        WHEN destino.FECHA_FIN_ES IS NULL THEN NULL
+                        WHEN origen.F_Termino IS NULL OR origen.F_Termino <= '1900-01-01' THEN NULL
+                        ELSE DATEDIFF(day, destino.FECHA_FIN_ES, origen.F_Termino)
+                    END
+                FROM mttos.dbo.Seguimientos AS destino
+                INNER JOIN UltimosMovimientos AS origen ON destino.SUCURSAL = origen.SUCURSAL
+                WHERE origen.fila = 1;
             ";
 
-            var query = _context.Seguimientos.FromSqlRaw(querySQL);
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync(sqlUpdate);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en la sincronización automática previo al Excel.");
+            }
+
+            var query = _context.Seguimientos.AsQueryable();
 
             if (filtroRuta.HasValue)
                 query = query.Where(s => s.RUTA == filtroRuta.Value);
@@ -316,14 +329,10 @@ namespace Mantenimientos.Controllers
                 query = query.Where(s => s.SUCURSAL == filtroSucursal);
 
             if (filtroMes.HasValue)
-                query = query.Where(s =>
-                    s.FECHA_INI_RE.HasValue &&
-                    s.FECHA_INI_RE.Value.Month == filtroMes.Value);
+                query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Month == filtroMes.Value);
 
             if (filtroAnio.HasValue)
-                query = query.Where(s =>
-                    s.FECHA_INI_RE.HasValue &&
-                    s.FECHA_INI_RE.Value.Year == filtroAnio.Value);
+                query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Year == filtroAnio.Value);
 
             var datos = await query
                 .OrderBy(s => s.RUTA)
