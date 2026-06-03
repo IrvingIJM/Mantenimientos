@@ -32,7 +32,6 @@ namespace Mantenimientos.Controllers
             int? filtroMes,
             int? filtroAnio)
         {
-            filtroAnio ??= DateTime.Now.Year;
 
             string sqlUpdate = @"
                 WITH UltimosMovimientos AS (
@@ -40,7 +39,7 @@ namespace Mantenimientos.Controllers
                         SUCURSAL,
                         F_Inicio,
                         F_Termino,
-                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL ORDER BY F_Inicio DESC) as fila
+                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL, YEAR(F_Inicio) ORDER BY F_Inicio DESC) as fila
                     FROM Iker.dbo.DBICET
                 )
                 UPDATE destino
@@ -50,10 +49,12 @@ namespace Mantenimientos.Controllers
                     destino.DIAS_ATRASO = CASE 
                         WHEN destino.FECHA_FIN_ES IS NULL THEN NULL
                         WHEN origen.F_Termino IS NULL OR origen.F_Termino <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, destino.FECHA_FIN_ES, origen.F_Termino)
+                        ELSE DATEDIFF(day, origen.F_Termino, destino.FECHA_FIN_ES)
                     END
                 FROM mttos.dbo.Seguimientos AS destino
-                INNER JOIN UltimosMovimientos AS origen ON destino.SUCURSAL = origen.SUCURSAL
+                INNER JOIN UltimosMovimientos AS origen 
+                    ON destino.SUCURSAL = origen.SUCURSAL
+                    AND YEAR(destino.FECHA_FIN_ES) = YEAR(origen.F_Inicio)
                 WHERE origen.fila = 1;
             ";
 
@@ -77,8 +78,8 @@ namespace Mantenimientos.Controllers
             if (filtroMes.HasValue)
                 query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Month == filtroMes.Value);
 
-            if (filtroAnio.HasValue)
-                query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Year == filtroAnio.Value);
+            if (filtroAnio.HasValue && filtroAnio.Value > 0)
+                query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
 
             var seguimientos = await query
                 .OrderBy(s => s.RUTA)
@@ -222,7 +223,7 @@ namespace Mantenimientos.Controllers
 
             int diasDesfasados = 0;
             if (model.FECHA_FIN_RE.HasValue && model.FECHA_FIN_ES.HasValue)
-                diasDesfasados = (int)(model.FECHA_FIN_RE.Value - model.FECHA_FIN_ES.Value).TotalDays;
+                diasDesfasados = (int)(model.FECHA_FIN_ES.Value - model.FECHA_FIN_RE.Value).TotalDays;
 
             try
             {
@@ -284,17 +285,15 @@ namespace Mantenimientos.Controllers
             int? filtroMes,
             int? filtroAnio)
         {
-            // CAMBIO 3: También aseguramos el año por defecto al exportar a Excel
             filtroAnio ??= DateTime.Now.Year;
 
-            // CAMBIO 4: Invertimos el DATEDIFF aquí también para el reporte de Excel
             string sqlUpdate = @"
                 WITH UltimosMovimientos AS (
                     SELECT 
                         SUCURSAL,
                         F_Inicio,
                         F_Termino,
-                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL ORDER BY F_Inicio DESC) as fila
+                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL, YEAR(F_Inicio) ORDER BY F_Inicio DESC) as fila
                     FROM Iker.dbo.DBICET
                 )
                 UPDATE destino
@@ -304,10 +303,12 @@ namespace Mantenimientos.Controllers
                     destino.DIAS_ATRASO = CASE 
                         WHEN destino.FECHA_FIN_ES IS NULL THEN NULL
                         WHEN origen.F_Termino IS NULL OR origen.F_Termino <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, destino.FECHA_FIN_ES, origen.F_Termino)
+                        ELSE DATEDIFF(day, origen.F_Termino, destino.FECHA_FIN_ES)
                     END
                 FROM mttos.dbo.Seguimientos AS destino
-                INNER JOIN UltimosMovimientos AS origen ON destino.SUCURSAL = origen.SUCURSAL
+                INNER JOIN UltimosMovimientos AS origen 
+                    ON destino.SUCURSAL = origen.SUCURSAL
+                    AND YEAR(destino.FECHA_FIN_ES) = YEAR(origen.F_Inicio)
                 WHERE origen.fila = 1;
             ";
 
@@ -383,9 +384,9 @@ namespace Mantenimientos.Controllers
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetOutsideBorderColor(XLColor.FromHtml("#CCCCCC"));
 
-                if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value > 0)
+                if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value < 0)
                     hoja.Cell(row, 7).Style.Font.SetFontColor(XLColor.Red).Font.SetBold(true);
-                else if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value < 0)
+                else if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value > 0)
                     hoja.Cell(row, 7).Style.Font.SetFontColor(XLColor.DarkGreen).Font.SetBold(true);
             }
 
