@@ -39,8 +39,9 @@ namespace Mantenimientos.Controllers
                         SUCURSAL,
                         F_Inicio,
                         F_Termino,
-                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL, YEAR(F_Inicio) ORDER BY F_Inicio DESC) as fila
+                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL ORDER BY F_Inicio DESC) as fila
                     FROM Iker.dbo.DBICET
+                    WHERE id_periodo = 7
                 )
                 UPDATE destino
                 SET 
@@ -54,7 +55,6 @@ namespace Mantenimientos.Controllers
                 FROM mttos.dbo.Seguimientos AS destino
                 INNER JOIN UltimosMovimientos AS origen 
                     ON destino.SUCURSAL = origen.SUCURSAL
-                    AND YEAR(destino.FECHA_FIN_ES) = YEAR(origen.F_Inicio)
                 WHERE origen.fila = 1;
             ";
 
@@ -76,7 +76,7 @@ namespace Mantenimientos.Controllers
                 query = query.Where(s => s.SUCURSAL == filtroSucursal);
 
             if (filtroMes.HasValue)
-                query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Month == filtroMes.Value);
+                query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Month == filtroMes.Value);
 
             if (filtroAnio.HasValue && filtroAnio.Value > 0)
                 query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
@@ -293,8 +293,9 @@ namespace Mantenimientos.Controllers
                         SUCURSAL,
                         F_Inicio,
                         F_Termino,
-                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL, YEAR(F_Inicio) ORDER BY F_Inicio DESC) as fila
+                        ROW_NUMBER() OVER (PARTITION BY SUCURSAL ORDER BY F_Inicio DESC) as fila
                     FROM Iker.dbo.DBICET
+                    WHERE id_periodo = 7
                 )
                 UPDATE destino
                 SET 
@@ -308,7 +309,6 @@ namespace Mantenimientos.Controllers
                 FROM mttos.dbo.Seguimientos AS destino
                 INNER JOIN UltimosMovimientos AS origen 
                     ON destino.SUCURSAL = origen.SUCURSAL
-                    AND YEAR(destino.FECHA_FIN_ES) = YEAR(origen.F_Inicio)
                 WHERE origen.fila = 1;
             ";
 
@@ -330,10 +330,10 @@ namespace Mantenimientos.Controllers
                 query = query.Where(s => s.SUCURSAL == filtroSucursal);
 
             if (filtroMes.HasValue)
-                query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Month == filtroMes.Value);
+                query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Month == filtroMes.Value);
 
             if (filtroAnio.HasValue)
-                query = query.Where(s => s.FECHA_INI_RE.HasValue && s.FECHA_INI_RE.Value.Year == filtroAnio.Value);
+                query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
 
             var datos = await query
                 .OrderBy(s => s.RUTA)
@@ -383,11 +383,6 @@ namespace Mantenimientos.Controllers
                     .Fill.SetBackgroundColor(colorFondo)
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetOutsideBorderColor(XLColor.FromHtml("#CCCCCC"));
-
-                if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value < 0)
-                    hoja.Cell(row, 7).Style.Font.SetFontColor(XLColor.Red).Font.SetBold(true);
-                else if (s.DIAS_ATRASO.HasValue && s.DIAS_ATRASO.Value > 0)
-                    hoja.Cell(row, 7).Style.Font.SetFontColor(XLColor.DarkGreen).Font.SetBold(true);
             }
 
             using var ms = new System.IO.MemoryStream();
@@ -468,6 +463,6 @@ namespace Mantenimientos.Controllers
         }
 
         private static string FormatFechaExcel(DateTime? fecha) =>
-            fecha?.ToString("dd/MM/yyyy") ?? "N/A";
+            fecha?.ToString("dd/MM/yyyy") ?? "";
     }
 }
