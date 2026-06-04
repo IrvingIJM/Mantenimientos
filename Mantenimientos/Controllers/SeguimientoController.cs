@@ -30,9 +30,9 @@ namespace Mantenimientos.Controllers
             int? filtroRuta,
             string? filtroSucursal,
             int? filtroMes,
-            int? filtroAnio)
+            int? filtroAnio,
+            bool ocultarSinFecha = false)
         {
-
             string sqlUpdate = @"
                 WITH UltimosMovimientos AS (
                     SELECT 
@@ -80,6 +80,13 @@ namespace Mantenimientos.Controllers
 
             if (filtroAnio.HasValue && filtroAnio.Value > 0)
                 query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
+
+            if (ocultarSinFecha)
+            {
+                query = query.Where(s =>
+                    (s.FECHA_INI_RE != null && s.FECHA_INI_RE.Value != null)
+                );
+            }
 
             var seguimientos = await query
                 .OrderBy(s => s.RUTA)
@@ -131,6 +138,8 @@ namespace Mantenimientos.Controllers
                     Selected = filtroAnio.HasValue && a == filtroAnio.Value
                 })
                 .ToList();
+
+            ViewBag.OcultarSinFecha = ocultarSinFecha;
 
             var viewModel = new IndexVM
             {
@@ -196,14 +205,13 @@ namespace Mantenimientos.Controllers
             try
             {
                 int registrosInsertados = await _context.Database.ExecuteSqlRawAsync(sqlQuery);
-
-                TempData["Mensaje"] = $"¡Importación exitosa! Se agregaron {registrosInsertados} nuevas sucursales desde la base de datos 'Iker'.";
+                TempData["Mensaje"] = $"¡Importación exitosa! Se agregaron {registrosInsertados} nuevas sucursales.";
                 TempData["TipoAlerta"] = "success";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al importar sucursales desde Iker.dbo.Sucursales");
-                TempData["Mensaje"] = "Error al importar sucursales. Verifica que los nombres de las columnas en Iker.dbo.Sucursales sean correctos.";
+                _logger.LogError(ex, "Error al importar sucursales.");
+                TempData["Mensaje"] = "Error al importar sucursales.";
                 TempData["TipoAlerta"] = "danger";
             }
 
@@ -240,16 +248,12 @@ namespace Mantenimientos.Controllers
                         DIAS_ATRASO = diasDesfasados,
                         OBSERVACIONES = model.OBSERVACIONES?.Trim()
                     };
-
                     _context.Seguimientos.Add(nuevo);
-                    TempData["Mensaje"] = "Observación guardada correctamente.";
-                    TempData["TipoAlerta"] = "success";
                 }
                 else
                 {
                     var existente = await _context.Seguimientos.FindAsync(model.ID);
-                    if (existente is null)
-                        return NotFound();
+                    if (existente is null) return NotFound();
 
                     existente.RUTA = model.RUTA;
                     existente.SUCURSAL = model.SUCURSAL;
@@ -261,16 +265,15 @@ namespace Mantenimientos.Controllers
                     existente.OBSERVACIONES = model.OBSERVACIONES?.Trim();
 
                     _context.Seguimientos.Update(existente);
-                    TempData["Mensaje"] = "Observación actualizada correctamente.";
-                    TempData["TipoAlerta"] = "success";
                 }
-
                 await _context.SaveChangesAsync();
+                TempData["Mensaje"] = "Operación realizada con éxito.";
+                TempData["TipoAlerta"] = "success";
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al guardar observación.");
-                TempData["Mensaje"] = "Error al guardar. Intente nuevamente.";
+                TempData["Mensaje"] = "Error al guardar.";
                 TempData["TipoAlerta"] = "danger";
             }
 
@@ -283,10 +286,9 @@ namespace Mantenimientos.Controllers
             int? filtroRuta,
             string? filtroSucursal,
             int? filtroMes,
-            int? filtroAnio)
+            int? filtroAnio,
+            bool ocultarSinFecha = false)
         {
-            filtroAnio ??= DateTime.Now.Year;
-
             string sqlUpdate = @"
                 WITH UltimosMovimientos AS (
                     SELECT 
@@ -316,52 +318,34 @@ namespace Mantenimientos.Controllers
             {
                 await _context.Database.ExecuteSqlRawAsync(sqlUpdate);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error en la sincronización automática previo al Excel.");
-            }
+            catch (Exception ex) { _logger.LogError(ex, "Error en actualización previa a Excel."); }
 
             var query = _context.Seguimientos.AsQueryable();
 
-            if (filtroRuta.HasValue)
-                query = query.Where(s => s.RUTA == filtroRuta.Value);
+            if (filtroRuta.HasValue) query = query.Where(s => s.RUTA == filtroRuta.Value);
+            if (!string.IsNullOrWhiteSpace(filtroSucursal)) query = query.Where(s => s.SUCURSAL == filtroSucursal);
+            if (filtroMes.HasValue) query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Month == filtroMes.Value);
+            if (filtroAnio.HasValue && filtroAnio.Value > 0) query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
 
-            if (!string.IsNullOrWhiteSpace(filtroSucursal))
-                query = query.Where(s => s.SUCURSAL == filtroSucursal);
+            if (ocultarSinFecha)
+            {
+                query = query.Where(s =>
+                    (s.FECHA_INI_RE != null && s.FECHA_INI_RE.Value != null)
+                );
+            }
 
-            if (filtroMes.HasValue)
-                query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Month == filtroMes.Value);
-
-            if (filtroAnio.HasValue)
-                query = query.Where(s => s.FECHA_INI_ES.HasValue && s.FECHA_INI_ES.Value.Year == filtroAnio.Value);
-
-            var datos = await query
-                .OrderBy(s => s.RUTA)
-                .ThenBy(s => s.SUCURSAL)
-                .ToListAsync();
+            var datos = await query.OrderBy(s => s.RUTA).ThenBy(s => s.SUCURSAL).ToListAsync();
 
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
 
-            string[] encabezados =
-            {
-                "Ruta", "Sucursal",
-                "F. Inicio Est.", "F. Fin Est.",
-                "F. Inicio Real", "F. Fin Real",
-                "Días Desfasados", "Observaciones"
-            };
+            string[] encabezados = { "Ruta", "Sucursal", "F. Inicio Est.", "F. Fin Est.", "F. Inicio Real", "F. Fin Real", "Días Desfasados", "Observaciones" };
 
             for (int col = 0; col < encabezados.Length; col++)
             {
                 var celda = hoja.Cell(4, col + 1);
                 celda.Value = encabezados[col];
-                celda.Style
-                    .Font.SetBold(true)
-                    .Font.SetFontColor(XLColor.White)
-                    .Fill.SetBackgroundColor(XLColor.FromHtml("#457B9D"))
-                    .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
-                    .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
-                    .Border.SetOutsideBorderColor(XLColor.White);
+                celda.Style.Font.SetBold(true).Font.SetFontColor(XLColor.White).Fill.SetBackgroundColor(XLColor.FromHtml("#457B9D")).Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center).Border.SetOutsideBorder(XLBorderStyleValues.Thin).Border.SetOutsideBorderColor(XLColor.White);
             }
 
             for (int i = 0; i < datos.Count; i++)
@@ -379,62 +363,40 @@ namespace Mantenimientos.Controllers
                 hoja.Cell(row, 8).Value = s.OBSERVACIONES ?? string.Empty;
 
                 var colorFondo = i % 2 == 0 ? XLColor.White : XLColor.FromHtml("#F1FAEE");
-                hoja.Range(row, 1, row, 8).Style
-                    .Fill.SetBackgroundColor(colorFondo)
-                    .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
-                    .Border.SetOutsideBorderColor(XLColor.FromHtml("#CCCCCC"));
+                hoja.Range(row, 1, row, 8).Style.Fill.SetBackgroundColor(colorFondo).Border.SetOutsideBorder(XLBorderStyleValues.Thin).Border.SetOutsideBorderColor(XLColor.FromHtml("#CCCCCC"));
             }
 
             using var ms = new System.IO.MemoryStream();
             workbook.SaveAs(ms);
-            ms.Seek(0, System.IO.SeekOrigin.Begin);
             var content = ms.ToArray();
-            var fileName = $"Mantenimientos_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
-            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Mantenimientos_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
-        // GET  /Seguimiento/ObtenerSucursalesFiltro?ruta=X
+        // GET  /Seguimiento/ObtenerSucursalesFiltro
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
         {
-            var sucursales = await _context.Seguimientos
-                .Where(s => s.RUTA == ruta)
-                .Select(s => s.SUCURSAL)
-                .Distinct()
-                .OrderBy(s => s)
-                .ToListAsync();
-
+            var sucursales = await _context.Seguimientos.Where(s => s.RUTA == ruta).Select(s => s.SUCURSAL).Distinct().OrderBy(s => s).ToListAsync();
             return Json(sucursales);
         }
 
-        // GET  /Seguimiento/ObtenerSucursales?ruta=X
+        // GET  /Seguimiento/ObtenerSucursales
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursales(string ruta)
         {
-            if (string.IsNullOrWhiteSpace(ruta))
-                return Json(new List<string>());
-
+            if (string.IsNullOrWhiteSpace(ruta)) return Json(new List<string>());
             var sucursales = await _empDataService.ObtenerSucursales(ruta);
             return Json(sucursales);
         }
 
-        // GET  /Seguimiento/ObtenerFechasEstimadas?ruta=X&sucursal=Y
+        // GET  /Seguimiento/ObtenerFechasEstimadas
         [HttpGet]
         public async Task<IActionResult> ObtenerFechasEstimadas(string ruta, string sucursal)
         {
-            if (string.IsNullOrWhiteSpace(ruta) || string.IsNullOrWhiteSpace(sucursal))
-                return Json(new { });
-
+            if (string.IsNullOrWhiteSpace(ruta) || string.IsNullOrWhiteSpace(sucursal)) return Json(new { });
             var fechas = await _empDataService.ObtenerFechasEstimadasAsync(ruta, sucursal);
-
-            if (fechas is null)
-                return Json(new { });
-
-            return Json(new
-            {
-                fechaIniEst = fechas.FechaInicioEstimada.ToString("yyyy-MM-dd"),
-                fechaFinEst = fechas.FechaFinEstimada.ToString("yyyy-MM-dd")
-            });
+            if (fechas is null) return Json(new { });
+            return Json(new { fechaIniEst = fechas.FechaInicioEstimada.ToString("yyyy-MM-dd"), fechaFinEst = fechas.FechaFinEstimada.ToString("yyyy-MM-dd") });
         }
 
         private async Task CargarDropdownAsync(ObservacionVM model)
@@ -442,27 +404,20 @@ namespace Mantenimientos.Controllers
             try
             {
                 var rutas = await _empDataService.ObtenerRutasAsync();
-                model.RutasDisponibles = rutas
-                    .Select(r => new SelectListItem { Value = r, Text = r })
-                    .ToList();
-
+                model.RutasDisponibles = rutas.Select(r => new SelectListItem { Value = r, Text = r }).ToList();
                 if (model.RUTA != 0)
                 {
                     var sucursales = await _empDataService.ObtenerSucursales(model.RUTA.ToString());
-                    model.SucursalesDisponibles = sucursales
-                        .Select(s => new SelectListItem { Value = s, Text = s })
-                        .ToList();
+                    model.SucursalesDisponibles = sucursales.Select(s => new SelectListItem { Value = s, Text = s }).ToList();
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar dropdowns de empresa.");
+                _logger.LogError(ex, "Error al cargar dropdowns.");
                 model.RutasDisponibles = new List<SelectListItem>();
                 model.SucursalesDisponibles = new List<SelectListItem>();
             }
         }
-
-        private static string FormatFechaExcel(DateTime? fecha) =>
-            fecha?.ToString("dd/MM/yyyy") ?? "";
+        private static string FormatFechaExcel(DateTime? fecha) => fecha?.ToString("dd/MM/yyyy") ?? "";
     }
 }

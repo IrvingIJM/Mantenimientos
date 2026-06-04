@@ -116,6 +116,17 @@
                     </div>
                 </div>
 
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="form-check form-switch ps-5">
+                            <input class="form-check-input scale-115" type="checkbox" name="ocultarSinFecha" id="ocultarSinFecha" value="true" @(ViewBag.OcultarSinFecha == true ? "checked" : "")>
+                            <label class="form-check-label fw-semibold text-dark ms-2" for="ocultarSinFecha">
+                                <i class="bi bi-eye-slash-fill text-warning me-1"></i> Ocultar fechas vacias
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="d-flex gap-2 mt-4 pt-3 border-top flex-wrap align-items-center">
                     <button type="submit" class="btn btn-primary px-4 fw-semibold shadow-sm"
                             style="background-color: white; border-color: #1D3557; color: #1D3557;">
@@ -128,7 +139,7 @@
 
                     <div class="ms-md-auto col-12 col-md-auto text-end mt-2 mt-md-0">
                         <a id="btnExportar"
-                           href="@Url.Action("Exportar", "Seguimiento", new { filtroRuta = Model.FiltroRuta, filtroSucursal = Model.FiltroSucursal, filtroMes = Model.FiltroMes, filtroAnio = Model.FiltroAnio })"
+                           href="@Url.Action("Exportar", "Seguimiento", new { filtroRuta = Model.FiltroRuta, filtroSucursal = Model.FiltroSucursal, filtroMes = Model.FiltroMes, filtroAnio = Model.FiltroAnio, ocultarSinFecha = ViewBag.OcultarSinFecha })"
                            role="button"
                            class="btn btn-success d-inline-flex align-items-center gap-2 px-4 fw-semibold shadow-sm"
                            style="background-color: greenyellow; border-color: black; color: black;">
@@ -231,7 +242,7 @@
                                     else
                                     {
                                         <em class="text-muted opacity-50"> </em>
-                                    }   
+                                    }
                                 </td>
                                 <td class="text-center">
                                     <a href="@Url.Action("Observacion", "Seguimiento", new { id = item.ID })"
@@ -249,6 +260,13 @@
     </div>
 </div>
 
+<style>
+    .scale-115 {
+        transform: scale(1.15);
+        cursor: pointer;
+    }
+</style>
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -260,23 +278,26 @@
             // Limpiar filtros
             const btnLimpiar = document.getElementById('btnLimpiar');
             if (btnLimpiar) {
-                btnLimpiar.addEventListener('click', function () {
+                btnLimpiar.addEventListener('click', function (e) {
+                    e.preventDefault();
+
                     const rutaSel = document.getElementById('filtroRuta');
                     const sucSel = document.getElementById('filtroSucursal');
                     const mesSel = document.getElementById('filtroMes');
                     const anioSel = document.getElementById('filtroAnio');
+                    const chkSinFecha = document.getElementById('ocultarSinFecha');
 
                     if (rutaSel) rutaSel.value = '';
                     if (sucSel) sucSel.innerHTML = '<option value="">— Todas las sucursales —</option>';
                     if (mesSel) mesSel.value = '';
                     if (anioSel) anioSel.value = '';
+                    if (chkSinFecha) chkSinFecha.checked = false;
 
-                    // Redirigir a la acción Index sin parámetros
                     window.location.href = '@Url.Action("Index", "Seguimiento")';
                 });
             }
 
-            // Exportar con filtros actuales
+            // Exportar con filtros actuales (Se sincronizó con ocultarSinFecha)
             const btnExportar = document.getElementById('btnExportar');
             if (btnExportar) {
                 btnExportar.addEventListener('click', function (e) {
@@ -285,12 +306,14 @@
                     const sucursal = document.getElementById('filtroSucursal')?.value || '';
                     const mes = document.getElementById('filtroMes')?.value || '';
                     const anio = document.getElementById('filtroAnio')?.value || '';
+                    const ocultarSinFecha = document.getElementById('ocultarSinFecha')?.checked || false;
 
                     const params = new URLSearchParams();
                     if (ruta) params.append('filtroRuta', ruta);
                     if (sucursal) params.append('filtroSucursal', sucursal);
                     if (mes) params.append('filtroMes', mes);
                     if (anio) params.append('filtroAnio', anio);
+                    if (ocultarSinFecha) params.append('ocultarSinFecha', 'true'); // 👈 Envía el parámetro correcto al Excel
 
                     window.location.href = '/Seguimiento/Exportar?' + params.toString();
                 });
