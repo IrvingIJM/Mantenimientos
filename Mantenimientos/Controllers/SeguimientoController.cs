@@ -83,9 +83,7 @@ namespace Mantenimientos.Controllers
 
             if (ocultarSinFecha)
             {
-                query = query.Where(s =>
-                    (s.FECHA_INI_RE != null && s.FECHA_INI_RE.Value != null)
-                );
+                query = query.Where(s => s.FECHA_INI_RE.HasValue);
             }
 
             var seguimientos = await query
@@ -230,8 +228,10 @@ namespace Mantenimientos.Controllers
             }
 
             int diasDesfasados = 0;
-            if (model.FECHA_FIN_RE.HasValue && model.FECHA_FIN_ES.HasValue)
-                diasDesfasados = (int)(model.FECHA_INI_ES.Value - model.FECHA_INI_RE.Value).TotalDays;
+            if (model.FECHA_INI_RE.HasValue && model.FECHA_INI_ES.HasValue)
+            {
+                diasDesfasados = (model.FECHA_INI_ES.Value - model.FECHA_INI_RE.Value).Days;
+            }
 
             try
             {
