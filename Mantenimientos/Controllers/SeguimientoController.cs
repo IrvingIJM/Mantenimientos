@@ -50,7 +50,7 @@ namespace Mantenimientos.Controllers
                     destino.DIAS_ATRASO = CASE 
                         WHEN destino.FECHA_FIN_ES IS NULL THEN NULL
                         WHEN origen.F_Termino IS NULL OR origen.F_Termino <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, origen.F_Termino, destino.FECHA_FIN_ES)
+                        ELSE DATEDIFF(day, origen.F_Inicio, destino.FECHA_INI_ES)
                     END
                 FROM mttos.dbo.Seguimientos AS destino
                 INNER JOIN UltimosMovimientos AS origen 
@@ -223,7 +223,7 @@ namespace Mantenimientos.Controllers
 
             int diasDesfasados = 0;
             if (model.FECHA_FIN_RE.HasValue && model.FECHA_FIN_ES.HasValue)
-                diasDesfasados = (int)(model.FECHA_FIN_ES.Value - model.FECHA_FIN_RE.Value).TotalDays;
+                diasDesfasados = (int)(model.FECHA_INI_ES.Value - model.FECHA_INI_RE.Value).TotalDays;
 
             try
             {
@@ -304,7 +304,7 @@ namespace Mantenimientos.Controllers
                     destino.DIAS_ATRASO = CASE 
                         WHEN destino.FECHA_FIN_ES IS NULL THEN NULL
                         WHEN origen.F_Termino IS NULL OR origen.F_Termino <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, origen.F_Termino, destino.FECHA_FIN_ES)
+                        ELSE DATEDIFF(day, origen.F_Inicio, destino.FECHA_INI_ES)
                     END
                 FROM mttos.dbo.Seguimientos AS destino
                 INNER JOIN UltimosMovimientos AS origen 
