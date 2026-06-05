@@ -339,32 +339,67 @@ namespace Mantenimientos.Controllers
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
 
-            string[] encabezados = { "Ruta", "Sucursal", "F. Inicio Est.", "F. Fin Est.", "F. Inicio Real", "F. Fin Real", "Días Desfasados", "Observaciones" };
+            hoja.Style.Font.FontName = "Arial";
+            hoja.Style.Font.FontSize = 10;
+            hoja.SetShowGridLines(true);
 
-            for (int col = 0; col < encabezados.Length; col++)
-            {
-                var celda = hoja.Cell(4, col + 1);
-                celda.Value = encabezados[col];
-                celda.Style.Font.SetBold(true).Font.SetFontColor(XLColor.White).Fill.SetBackgroundColor(XLColor.FromHtml("#457B9D")).Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center).Border.SetOutsideBorder(XLBorderStyleValues.Thin).Border.SetOutsideBorderColor(XLColor.White);
-            }
+            hoja.Cell("J1").Value = "Centro de Ventas";
+            hoja.Range("J1:J2").Merge();
 
+            hoja.Cell("K1").Value = "Fecha Estimada";
+            hoja.Range("K1:L1").Merge(); 
+
+            hoja.Cell("M1").Value = "Fecha Real";
+            hoja.Range("M1:N1").Merge();
+
+            hoja.Cell("O1").Value = "Días Desfasados";
+            hoja.Range("O1:O2").Merge();
+
+            hoja.Cell("P1").Value = "Observaciones";
+            hoja.Range("P1:P2").Merge();
+
+            hoja.Cell("K2").Value = "Inicio";
+            hoja.Cell("L2").Value = "Fin";
+            hoja.Cell("M2").Value = "Inicio";
+            hoja.Cell("N2").Value = "Fin";
+
+            var rangoEncabezado = hoja.Range("J1:P2");
+            rangoEncabezado.Style
+                .Font.SetBold(true)
+                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+
+            rangoEncabezado.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+            rangoEncabezado.Cells().Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
+
+            int filaInicio = 3;
             for (int i = 0; i < datos.Count; i++)
             {
                 var s = datos[i];
-                int row = i + 5;
+                int row = filaInicio + i;
 
-                hoja.Cell(row, 1).Value = s.RUTA;
-                hoja.Cell(row, 2).Value = s.SUCURSAL;
-                hoja.Cell(row, 3).Value = FormatFechaExcel(s.FECHA_INI_ES);
-                hoja.Cell(row, 4).Value = FormatFechaExcel(s.FECHA_FIN_ES);
-                hoja.Cell(row, 5).Value = FormatFechaExcel(s.FECHA_INI_RE);
-                hoja.Cell(row, 6).Value = FormatFechaExcel(s.FECHA_FIN_RE);
-                hoja.Cell(row, 7).Value = s.DIAS_ATRASO;
-                hoja.Cell(row, 8).Value = s.OBSERVACIONES ?? string.Empty;
+                hoja.Cell(row, "J").Value = s.SUCURSAL;
+                hoja.Cell(row, "K").Value = FormatFechaExcel(s.FECHA_INI_ES);
+                hoja.Cell(row, "L").Value = FormatFechaExcel(s.FECHA_FIN_ES);
+                hoja.Cell(row, "M").Value = FormatFechaExcel(s.FECHA_INI_RE);
+                hoja.Cell(row, "N").Value = FormatFechaExcel(s.FECHA_FIN_RE);
+                hoja.Cell(row, "O").Value = s.DIAS_ATRASO;
+                hoja.Cell(row, "P").Value = s.OBSERVACIONES ?? string.Empty;
 
-                var colorFondo = i % 2 == 0 ? XLColor.White : XLColor.FromHtml("#F1FAEE");
-                hoja.Range(row, 1, row, 8).Style.Fill.SetBackgroundColor(colorFondo).Border.SetOutsideBorder(XLBorderStyleValues.Thin).Border.SetOutsideBorderColor(XLColor.FromHtml("#CCCCCC"));
+                hoja.Cell(row, "J").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                hoja.Range(row, 11, row, 15).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center); // K a O centrados
+                hoja.Cell(row, "P").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+
+                //if (s.DIAS_ATRASO < 0)
+                //{
+                //    hoja.Range(row, 10, row, 16).Style.Fill.SetBackgroundColor(XLColor.FromHtml("#F7E1D7"));
+                //}
+
+                hoja.Range(row, 10, row, 16).Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                hoja.Range(row, 10, row, 16).Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
             }
+
+            hoja.Columns("J:P").AdjustToContents();
 
             using var ms = new System.IO.MemoryStream();
             workbook.SaveAs(ms);
