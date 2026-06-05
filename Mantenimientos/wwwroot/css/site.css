@@ -151,20 +151,20 @@ body {
 
 .desfase-atraso {
     background-color: #FFF5F5;
-    border-color: var(--bimbo-rojo);
-    color: var(--bimbo-rojo);
+    border-color: var(--b-rojo);
+    color: var(--b-rojo);
 }
 
 .desfase-ok {
     background-color: #F0FFF4;
-    border-color: var(--bimbo-verde);
+    border-color: var(--b-verde);
     color: #276749;
 }
 
 .desfase-adelanto {
     background-color: #E6F6FF;
-    border-color: var(--bimbo-azul-medio);
-    color: var(--bimbo-azul-oscuro);
+    border-color: var(--b-azul-medio);
+    color: var(--b-azul-oscuro);
 }
 
 /* Estadisticas mini en pie de tabla */
@@ -183,7 +183,7 @@ body {
 
 .stat-label {
     font-size: 0.75rem;
-    color: var(--bimbo-gris);
+    color: var(--b-gris);
     margin-top: 2px;
 }
 
@@ -191,7 +191,7 @@ body {
 
 .form-control:focus,
 .form-select:focus {
-    border-color: var(--b-azul-medio);
+    border-color: var(--b-medio);
     box-shadow: 0 0 0 3px rgba(69, 123, 157, 0.15);
 }
 

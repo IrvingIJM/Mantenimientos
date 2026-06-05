@@ -50,7 +50,7 @@ namespace Mantenimientos.Controllers
                     destino.DIAS_ATRASO = CASE 
                         WHEN destino.FECHA_FIN_ES IS NULL THEN NULL
                         WHEN origen.F_Termino IS NULL OR origen.F_Termino <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, origen.F_Inicio, destino.FECHA_INI_ES)
+                        ELSE DATEDIFF(day, destino.FECHA_INI_ES, origen.F_Inicio)
                     END
                 FROM mttos.dbo.Seguimientos AS destino
                 INNER JOIN UltimosMovimientos AS origen 
@@ -306,7 +306,7 @@ namespace Mantenimientos.Controllers
                     destino.DIAS_ATRASO = CASE 
                         WHEN destino.FECHA_FIN_ES IS NULL THEN NULL
                         WHEN origen.F_Termino IS NULL OR origen.F_Termino <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, origen.F_Inicio, destino.FECHA_INI_ES)
+                        ELSE DATEDIFF(day, destino.FECHA_INI_ES, origen.F_Inicio)
                     END
                 FROM mttos.dbo.Seguimientos AS destino
                 INNER JOIN UltimosMovimientos AS origen 
@@ -387,12 +387,6 @@ namespace Mantenimientos.Controllers
                 hoja.Cell(row, "J").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
                 hoja.Range(row, 11, row, 15).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center); // K a O centrados
                 hoja.Cell(row, "P").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
-
-                //if (s.DIAS_ATRASO < 0)
-                //{
-                //    hoja.Range(row, 10, row, 16).Style.Fill.SetBackgroundColor(XLColor.FromHtml("#F7E1D7"));
-                //}
-
                 hoja.Range(row, 10, row, 16).Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
                 hoja.Range(row, 10, row, 16).Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
             }

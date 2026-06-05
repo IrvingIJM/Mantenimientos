@@ -25,47 +25,15 @@ href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&di
  
 <body> 
  
-    <!-- Navbaar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bimbo-navbar shadow-sm"> 
-        <div class="container-fluid px-4"> 
-            <a class="navbar-brand d-flex align-items-center gap-2" href="/"> 
-                <div class="brand-icon"> 
-                    <i class="bi bi-gear-fill"></i> 
-                </div> 
-                <div> 
-                    <span class="fw-bold fs-5">Mantenimientos</span> 
-                    <span class="badge bg-warning text-dark ms-1 small">Bimbo</span> 
-                </div> 
-            </a>
-            <button class="navbar-toggler" type="button" 
-                    data-bs-toggle="collapse" data-bs-target="#navbarNav"> 
-                <span class="navbar-toggler-icon"></span> 
-            </button> 
-            <div class="collapse navbar-collapse" id="navbarNav"> 
-                <ul class="navbar-nav ms-auto gap-1"> 
-                    <li class="nav-item"> 
-                        <a class="nav-link rounded px-3 @(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" 
-                           asp-controller="Seguimiento" asp-action="Index"> 
-                            <i class="bi bi-table me-1"></i>Consulta 
-                        </a> 
-                    </li>
-                </ul> 
-            </div> 
-        </div> 
-    </nav> 
- 
     <!-- Conetnido --> 
     <main class="main-content"> 
         @RenderBody() 
     </main> 
  
     <!-- Footer --> 
-    <footer class="footer-bimbo py-3 mt-auto"> 
+    <footer class="footer-bi py-3 mt-auto"> 
         <div class="container-fluid px-4">
             <div class="d-flex justify-content-between align-items-center"> 
-                <small class="text-muted"> 
-                    &copy; @DateTime.Now.Year — Sistema de Gestión de Mantenimientos 
-                </small> 
                 <small class="text-muted"> 
                     <i class="bi bi-database me-1"></i>BD: mttos 
                 </small> 
@@ -76,7 +44,7 @@ href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&di
     <!-- Scripts --> 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script> 
-    @await RenderSectionAsync("Scripts", required: false)  
- 
-</body>  
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
 </html> 

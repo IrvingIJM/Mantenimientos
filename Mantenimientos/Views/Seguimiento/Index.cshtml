@@ -14,7 +14,6 @@
     <div class="row align-items-center g-3 mb-4">
         <div class="col-12 col-sm">
             <h1 class="h3 fw-bold text-black m-0 d-flex align-items-center gap-2">
-                <i class="bi bi-clipboard2-data text-primary"></i>
                 Seguimiento de Mantenimientos
             </h1>
         </div>
@@ -32,7 +31,6 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header py-3 d-flex align-items-center gap-2"
              style="color: #ffffff ;background: linear-gradient(135deg, #1D3557 0%, #457B9D 100%);">
-            <i class="bi bi-funnel-fill text-white"></i>
             <span class="text-white fw-semibold m-0">Filtros de Búsqueda</span>
         </div>
         <div class="card-body bg-light-subtle">
@@ -40,7 +38,7 @@
                 <div class="row g-3">
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">
-                            <i class="bi bi-signpost me-1"></i>Ruta
+                            Ruta
                         </label>
                         <select name="filtroRuta" id="filtroRuta" class="form-select border-2">
                             <option value="">— Todas las rutas —</option>
@@ -59,7 +57,7 @@
                     </div>
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">
-                            <i class="bi bi-shop me-1"></i>Sucursal
+                            Sucursal
                         </label>
                         <select name="filtroSucursal" id="filtroSucursal" class="form-select border-2">
                             <option value="">— Todas las sucursales —</option>
@@ -78,7 +76,7 @@
                     </div>
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">
-                            <i class="bi bi-calendar3 me-1"></i>Mes
+                            Mes
                         </label>
                         <select name="filtroMes" id="filtroMes" class="form-select border-2">
                             <option value="">— Todos los meses —</option>
@@ -97,7 +95,7 @@
                     </div>
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">
-                            <i class="bi bi-calendar-event me-1"></i>Año
+                               Año
                         </label>
                         <select name="filtroAnio" id="filtroAnio" class="form-select border-2">
                             <option value="">— Todos los años —</option>
@@ -214,7 +212,7 @@
                                     }
                                     else if (noTieneFinReal)
                                     {
-                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 fw-bold fs-7" style="background-color: grey !important;">En proceso</span>
+                                        <span class="badge text-white rounded-pill px-3 py-1 fw-bold fs-7" style="background-color: #FF8C00 !important;">En proceso</span>
                                     }
                                     else
                                     {
@@ -224,7 +222,7 @@
                                         }
                                         else if (item.DIAS_ATRASO < 0)
                                         {
-                                            <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold fs-7">@item.DIAS_ATRASO días</span>
+                                            <span class="badge text-white rounded-pill px-3 py-1 fw-bold fs-7" style="background-color: #007BFF !important;">@item.DIAS_ATRASO días</span>
                                         }
                                         else
                                         {
@@ -269,7 +267,7 @@
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+
             // Inicializar tooltips de Bootstrap 5
             document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
                 new bootstrap.Tooltip(el);
@@ -278,6 +276,7 @@
             // Limpiar filtros
             const btnLimpiar = document.getElementById('btnLimpiar');
             if (btnLimpiar) {
+                console.log('btnLimpiar encontrado, agregando evento');
                 btnLimpiar.addEventListener('click', function (e) {
                     e.preventDefault();
 
@@ -295,11 +294,14 @@
 
                     window.location.href = '@Url.Action("Index", "Seguimiento")';
                 });
+            } else {
+                console.warn('btnLimpiar NO encontrado');
             }
 
-            // Exportar con filtros actuales (Se sincronizó con ocultarSinFecha)
+            // Exportar con filtros
             const btnExportar = document.getElementById('btnExportar');
             if (btnExportar) {
+                console.log('btnExportar encontrado, agregando evento');
                 btnExportar.addEventListener('click', function (e) {
                     e.preventDefault();
                     const ruta = document.getElementById('filtroRuta')?.value || '';
@@ -313,15 +315,18 @@
                     if (sucursal) params.append('filtroSucursal', sucursal);
                     if (mes) params.append('filtroMes', mes);
                     if (anio) params.append('filtroAnio', anio);
-                    if (ocultarSinFecha) params.append('ocultarSinFecha', 'true'); // 👈 Envía el parámetro correcto al Excel
+                    if (ocultarSinFecha) params.append('ocultarSinFecha', 'true');
 
                     window.location.href = '/Seguimiento/Exportar?' + params.toString();
                 });
+            } else {
+                console.warn('btnExportar NO encontrado');
             }
 
-            // Cargar sucursales dinámicamente al cambiar ruta
+            // Cargar sucursales dinamicamente al cambiar ruta
             const filtroRuta = document.getElementById('filtroRuta');
             if (filtroRuta) {
+                console.log('filtroRuta encontrado, agregando evento de cambio');
                 filtroRuta.addEventListener('change', async function () {
                     const ruta = this.value;
                     const selSucursal = document.getElementById('filtroSucursal');
@@ -348,7 +353,8 @@
                         selSucursal.innerHTML = '<option value="">— Todas las sucursales —</option>';
                     }
                 });
+            } else {
+                console.warn('filtroRuta NO encontrado');
             }
-        });
     </script>
 }
