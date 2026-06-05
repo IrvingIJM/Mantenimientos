@@ -329,9 +329,7 @@ namespace Mantenimientos.Controllers
 
             if (ocultarSinFecha)
             {
-                query = query.Where(s =>
-                    (s.FECHA_INI_RE != null && s.FECHA_INI_RE.Value != null)
-                );
+                query = query.Where(s => s.FECHA_INI_RE.HasValue);
             }
 
             var datos = await query.OrderBy(s => s.RUTA).ThenBy(s => s.SUCURSAL).ToListAsync();
