@@ -190,6 +190,7 @@
                             var noTieneEstimadas = item.FECHA_INI_ES == null || item.FECHA_INI_ES == new DateTime(1900, 1, 1) ||
                                                    item.FECHA_FIN_ES == null || item.FECHA_FIN_ES == new DateTime(1900, 1, 1);
 
+
                             var noTieneFinReal = item.FECHA_FIN_RE == null || item.FECHA_FIN_RE == new DateTime(1900, 1, 1);
 
                             var esAtrasado = !noTieneEstimadas && !noTieneFinReal && item.DIAS_ATRASO > 0;

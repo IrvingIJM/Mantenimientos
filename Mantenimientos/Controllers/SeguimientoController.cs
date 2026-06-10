@@ -338,30 +338,30 @@ namespace Mantenimientos.Controllers
             var hoja = workbook.Worksheets.Add("Mantenimientos");
 
             hoja.Style.Font.FontName = "Arial";
-            hoja.Style.Font.FontSize = 10;
+            hoja.Style.Font.FontSize = 8;
             hoja.SetShowGridLines(true);
 
-            hoja.Cell("J1").Value = "Centro de Ventas";
-            hoja.Range("J1:J2").Merge();
+            hoja.Cell("B3").Value = "Centro de Ventas";
+            hoja.Range("B3:B4").Merge();
 
-            hoja.Cell("K1").Value = "Fecha Estimada";
-            hoja.Range("K1:L1").Merge(); 
+            hoja.Cell("C3").Value = "Fecha Estimada";
+            hoja.Range("C3:D3").Merge(); 
 
-            hoja.Cell("M1").Value = "Fecha Real";
-            hoja.Range("M1:N1").Merge();
+            hoja.Cell("E3").Value = "Fecha Real";
+            hoja.Range("E3:F3").Merge();
 
-            hoja.Cell("O1").Value = "Días Desfasados";
-            hoja.Range("O1:O2").Merge();
+            hoja.Cell("G3").Value = "Días Desfasados";
+            hoja.Range("G3:G4").Merge();
 
-            hoja.Cell("P1").Value = "Observaciones";
-            hoja.Range("P1:P2").Merge();
+            hoja.Cell("H3").Value = "Observaciones";
+            hoja.Range("H3:H4").Merge();
 
-            hoja.Cell("K2").Value = "Inicio";
-            hoja.Cell("L2").Value = "Fin";
-            hoja.Cell("M2").Value = "Inicio";
-            hoja.Cell("N2").Value = "Fin";
+            hoja.Cell("C4").Value = "Inicio";
+            hoja.Cell("D4").Value = "Fin";
+            hoja.Cell("E4").Value = "Inicio";
+            hoja.Cell("F4").Value = "Fin";
 
-            var rangoEncabezado = hoja.Range("J1:P2");
+            var rangoEncabezado = hoja.Range("B3:H4");
             rangoEncabezado.Style
                 .Font.SetBold(true)
                 .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
@@ -370,28 +370,28 @@ namespace Mantenimientos.Controllers
             rangoEncabezado.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
             rangoEncabezado.Cells().Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
 
-            int filaInicio = 3;
+            int filaInicio = 5;
             for (int i = 0; i < datos.Count; i++)
             {
                 var s = datos[i];
                 int row = filaInicio + i;
 
-                hoja.Cell(row, "J").Value = s.SUCURSAL;
-                hoja.Cell(row, "K").Value = FormatFechaExcel(s.FECHA_INI_ES);
-                hoja.Cell(row, "L").Value = FormatFechaExcel(s.FECHA_FIN_ES);
-                hoja.Cell(row, "M").Value = FormatFechaExcel(s.FECHA_INI_RE);
-                hoja.Cell(row, "N").Value = FormatFechaExcel(s.FECHA_FIN_RE);
-                hoja.Cell(row, "O").Value = s.DIAS_ATRASO;
-                hoja.Cell(row, "P").Value = s.OBSERVACIONES ?? string.Empty;
+                hoja.Cell(row, "B").Value = s.SUCURSAL;
+                hoja.Cell(row, "C").Value = FormatFechaExcel(s.FECHA_INI_ES);
+                hoja.Cell(row, "D").Value = FormatFechaExcel(s.FECHA_FIN_ES);
+                hoja.Cell(row, "E").Value = FormatFechaExcel(s.FECHA_INI_RE);
+                hoja.Cell(row, "F").Value = FormatFechaExcel(s.FECHA_FIN_RE);
+                hoja.Cell(row, "G").Value = s.DIAS_ATRASO;
+                hoja.Cell(row, "H").Value = s.OBSERVACIONES ?? string.Empty;
 
-                hoja.Cell(row, "J").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
-                hoja.Range(row, 11, row, 15).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center); // K a O centrados
-                hoja.Cell(row, "P").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
-                hoja.Range(row, 10, row, 16).Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
-                hoja.Range(row, 10, row, 16).Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
+                hoja.Cell(row, "B").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                hoja.Range(row, 3, row, 7).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center); // K a O centrados
+                hoja.Cell(row, "H").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
+                hoja.Range(row, 2, row, 8).Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
+                hoja.Range(row, 2, row, 8).Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
             }
 
-            hoja.Columns("J:P").AdjustToContents();
+            hoja.Columns("B:H").AdjustToContents();
 
             using var ms = new System.IO.MemoryStream();
             workbook.SaveAs(ms);
