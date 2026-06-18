@@ -30,7 +30,7 @@ namespace Mantenimientos.Data
                 entity.Property(e => e.DIAS_ATRASO).HasDefaultValue(0);
                 entity.Property(e => e.OBSERVACIONES).HasColumnType("nvarchar(max)");
 
-                // Índices optimizados para búsquedas frecuentes y filtros del Index
+                // filtros del index
                 entity.HasIndex(e => e.RUTA).HasDatabaseName("IX_Seguimiento_Ruta");
                 entity.HasIndex(e => e.SUCURSAL).HasDatabaseName("IX_Seguimiento_Sucursal");
                 entity.HasIndex(e => e.FECHA_INI_ES).HasDatabaseName("IX_Seguimiento_FechaIniEst");

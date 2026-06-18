@@ -212,7 +212,7 @@
             </div>
         </div>
 
-        <!-- Botones de acción -->
+        <!-- Botones de accion -->
         <div class="d-flex gap-3 justify-content-end pt-2">
             <a asp-action="Index" class="btn btn-outline-secondary px-4">
                 <i class="bi bi-x-circle me-1"></i>Cancelar
@@ -262,7 +262,7 @@
             }
         }
 
-        // Carga dinámica de sucursales al cambiar ruta bd
+        // Carga dinamica de sucursales al cambiar ruta bd
         document.getElementById('selectRuta').addEventListener('change', async function () {
             const ruta        = this.value;
             const selSucursal = document.getElementById('selectSucursal');
@@ -325,7 +325,7 @@
         txtObs.addEventListener('input', actualizarContador);
         actualizarContador();
 
-        // Calcular desfase al cargar (modo edición)
+        // Calcular desfase al cargar
         window.addEventListener('DOMContentLoaded', calcularDesfase);
     </script>
 }

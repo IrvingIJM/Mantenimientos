@@ -67,7 +67,16 @@ namespace Mantenimientos.Controllers
                 _logger.LogError(ex, "Error en la sincronización automática del Index.");
             }
 
+            // Ontener sucursales activas
+            var sucursalesActivasEmpresa = await _context.Seguimientos
+                .FromSqlRaw("SELECT DISTINCT Sucursal as SUCURSAL FROM Iker.dbo.Sucursales WHERE ACTIVO = 1")
+                .Select(s => s.SUCURSAL)
+                .ToListAsync();
+
             var query = _context.Seguimientos.AsQueryable();
+
+            // filtro que solo muestra registros de sucursales avtivas 
+            query = query.Where(s => sucursalesActivasEmpresa.Contains(s.SUCURSAL));
 
             if (filtroRuta.HasValue)
                 query = query.Where(s => s.RUTA == filtroRuta.Value);
@@ -83,7 +92,10 @@ namespace Mantenimientos.Controllers
 
             if (ocultarSinFecha)
             {
-                query = query.Where(s => s.FECHA_INI_RE.HasValue);
+                var fechaDefault = new DateTime(1900, 1, 1);
+                query = query.Where(s =>
+                    (s.FECHA_INI_RE != null && s.FECHA_INI_RE != fechaDefault)
+                );
             }
 
             var seguimientos = await query
@@ -104,12 +116,15 @@ namespace Mantenimientos.Controllers
                 .ToListAsync();
 
             var todasRutas = await _context.Seguimientos
+                .Where(s => sucursalesActivasEmpresa.Contains(s.SUCURSAL))
                 .Select(r => r.RUTA)
                 .Distinct()
                 .OrderBy(r => r)
                 .ToListAsync();
 
-            var sucursalesQuery = _context.Seguimientos.AsQueryable();
+            var sucursalesQuery = _context.Seguimientos.AsQueryable()
+                .Where(s => sucursalesActivasEmpresa.Contains(s.SUCURSAL));
+
             if (filtroRuta.HasValue)
                 sucursalesQuery = sucursalesQuery.Where(s => s.RUTA == filtroRuta.Value);
 
@@ -155,7 +170,7 @@ namespace Mantenimientos.Controllers
             return View(viewModel);
         }
 
-        // GET  /Seguimiento/Observacion/{id?}
+        // GET   /Seguimiento/Observacion/{id?}
         [HttpGet]
         public async Task<IActionResult> Observacion(int? id)
         {
@@ -190,20 +205,21 @@ namespace Mantenimientos.Controllers
         public async Task<IActionResult> Importar()
         {
             string sqlQuery = @"
-                    INSERT INTO mttos.dbo.Seguimientos (RUTA, SUCURSAL)
-                    SELECT origen.RUTA, origen.Sucursal 
-                    FROM Iker.dbo.Sucursales AS origen
-                    WHERE NOT EXISTS (
-                        SELECT 1 
-                        FROM mttos.dbo.Seguimientos AS destino 
-                        WHERE destino.SUCURSAL = origen.SUCURSAL
-                    );
-                ";
+            INSERT INTO mttos.dbo.Seguimientos (RUTA, SUCURSAL)
+            SELECT origen.RUTA, origen.Sucursal 
+            FROM Iker.dbo.Sucursales AS origen
+            WHERE origen.ACTIVO = 1
+              AND NOT EXISTS (
+                SELECT 1 
+                FROM mttos.dbo.Seguimientos AS destino 
+                WHERE destino.SUCURSAL = origen.SUCURSAL
+              );
+        ";
 
             try
             {
                 int registrosInsertados = await _context.Database.ExecuteSqlRawAsync(sqlQuery);
-                TempData["Mensaje"] = $"¡Importación exitosa! Se agregaron {registrosInsertados} nuevas sucursales.";
+                TempData["Mensaje"] = $"¡Importación exitosa! Se agregaron {registrosInsertados} nuevas sucursales activas.";
                 TempData["TipoAlerta"] = "success";
             }
             catch (Exception ex)
@@ -246,7 +262,9 @@ namespace Mantenimientos.Controllers
                         FECHA_INI_RE = model.FECHA_INI_RE,
                         FECHA_FIN_RE = model.FECHA_FIN_RE,
                         DIAS_ATRASO = diasDesfasados,
-                        OBSERVACIONES = model.OBSERVACIONES?.Trim()
+                        OBSERVACIONES = !string.IsNullOrWhiteSpace(model.OBSERVACIONES)
+                            ? $"[{DateTime.Now:dd/MM/yyyy}]: {model.OBSERVACIONES.Trim()}"
+                            : null
                     };
                     _context.Seguimientos.Add(nuevo);
                 }
@@ -262,7 +280,14 @@ namespace Mantenimientos.Controllers
                     existente.FECHA_INI_RE = model.FECHA_INI_RE;
                     existente.FECHA_FIN_RE = model.FECHA_FIN_RE;
                     existente.DIAS_ATRASO = diasDesfasados;
-                    existente.OBSERVACIONES = model.OBSERVACIONES?.Trim();
+
+                    if (!string.IsNullOrWhiteSpace(model.OBSERVACIONES))
+                    {
+                        string nuevaNota = $"[{DateTime.Now:dd/MM/yyyy}]: {model.OBSERVACIONES.Trim()}";
+                        existente.OBSERVACIONES = string.IsNullOrWhiteSpace(existente.OBSERVACIONES)
+                            ? nuevaNota
+                            : $"{nuevaNota}\n{existente.OBSERVACIONES}";
+                    }
 
                     _context.Seguimientos.Update(existente);
                 }
@@ -310,7 +335,7 @@ namespace Mantenimientos.Controllers
                     END
                 FROM mttos.dbo.Seguimientos AS destino
                 INNER JOIN UltimosMovimientos AS origen 
-                    ON destino.SUCURSAL = origen.SUCURSAL
+                    ON destino.SUCURSAL = origen.SUCURSAL   
                 WHERE origen.fila = 1;
             ";
 
@@ -320,7 +345,15 @@ namespace Mantenimientos.Controllers
             }
             catch (Exception ex) { _logger.LogError(ex, "Error en actualización previa a Excel."); }
 
+            // tambien se exportan solo las rutas activas
+            var sucursalesActivasEmpresa = await _context.Seguimientos
+                .FromSqlRaw("SELECT DISTINCT Sucursal as SUCURSAL FROM Iker.dbo.Sucursales WHERE ACTIVO = 1")
+                .Select(s => s.SUCURSAL)
+                .ToListAsync();
+
             var query = _context.Seguimientos.AsQueryable();
+
+            query = query.Where(s => sucursalesActivasEmpresa.Contains(s.SUCURSAL));
 
             if (filtroRuta.HasValue) query = query.Where(s => s.RUTA == filtroRuta.Value);
             if (!string.IsNullOrWhiteSpace(filtroSucursal)) query = query.Where(s => s.SUCURSAL == filtroSucursal);
@@ -329,7 +362,10 @@ namespace Mantenimientos.Controllers
 
             if (ocultarSinFecha)
             {
-                query = query.Where(s => s.FECHA_INI_RE.HasValue);
+                var fechaDefault = new DateTime(1900, 1, 1);
+                query = query.Where(s =>
+                    (s.FECHA_INI_RE != null && s.FECHA_INI_RE != fechaDefault)
+                );
             }
 
             var datos = await query.OrderBy(s => s.RUTA).ThenBy(s => s.SUCURSAL).ToListAsync();
@@ -338,14 +374,14 @@ namespace Mantenimientos.Controllers
             var hoja = workbook.Worksheets.Add("Mantenimientos");
 
             hoja.Style.Font.FontName = "Arial";
-            hoja.Style.Font.FontSize = 8;
+            hoja.Style.Font.FontSize = 10;
             hoja.SetShowGridLines(true);
 
             hoja.Cell("B3").Value = "Centro de Ventas";
             hoja.Range("B3:B4").Merge();
 
             hoja.Cell("C3").Value = "Fecha Estimada";
-            hoja.Range("C3:D3").Merge(); 
+            hoja.Range("C3:D3").Merge();
 
             hoja.Cell("E3").Value = "Fecha Real";
             hoja.Range("E3:F3").Merge();
@@ -385,7 +421,7 @@ namespace Mantenimientos.Controllers
                 hoja.Cell(row, "H").Value = s.OBSERVACIONES ?? string.Empty;
 
                 hoja.Cell(row, "B").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
-                hoja.Range(row, 3, row, 7).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center); // K a O centrados
+                hoja.Range(row, 3, row, 7).Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
                 hoja.Cell(row, "H").Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Left);
                 hoja.Range(row, 2, row, 8).Style.Border.SetOutsideBorder(XLBorderStyleValues.Thin);
                 hoja.Range(row, 2, row, 8).Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
@@ -403,7 +439,15 @@ namespace Mantenimientos.Controllers
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
         {
-            var sucursales = await _context.Seguimientos.Where(s => s.RUTA == ruta).Select(s => s.SUCURSAL).Distinct().OrderBy(s => s).ToListAsync();
+            var sucursalesActivas = await _empDataService.ObtenerSucursales(ruta.ToString());
+
+            var sucursales = await _context.Seguimientos
+                .Where(s => s.RUTA == ruta && sucursalesActivas.Contains(s.SUCURSAL))
+                .Select(s => s.SUCURSAL)
+                .Distinct()
+                .OrderBy(s => s)
+                .ToListAsync();
+
             return Json(sucursales);
         }
 

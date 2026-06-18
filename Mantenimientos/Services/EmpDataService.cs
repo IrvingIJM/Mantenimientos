@@ -45,7 +45,7 @@ namespace Mantenimientos.Services
             return rutas;
         }
 
-        // Obtener sucursales de una ruta desde BD
+        // Obtener sucursales activas
         public async Task<List<string>> ObtenerSucursales(string ruta)
         {
             var sucursales = new List<string>();
@@ -56,12 +56,16 @@ namespace Mantenimientos.Services
 
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
+
                 const string sql = @"
-                    SELECT DISTINCT SUCURSAL
-                    FROM Seguimientos
-                    WHERE RUTA = @Ruta
-                      AND SUCURSAL IS NOT NULL
-                    ORDER BY SUCURSAL";
+                    SELECT DISTINCT s.SUCURSAL
+                    FROM mttos.dbo.Seguimientos s
+                    INNER JOIN Iker.dbo.Sucursales emp ON s.SUCURSAL = emp.Sucursal
+                    WHERE s.RUTA = @Ruta
+                      AND emp.ACTIVO = 1
+                      AND s.SUCURSAL IS NOT NULL
+                    ORDER BY s.SUCURSAL";
+
                 await using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@Ruta", rutaInt);
                 await using var reader = await cmd.ExecuteReaderAsync();
@@ -70,7 +74,7 @@ namespace Mantenimientos.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener sucursales para ruta {Ruta}.", ruta);
+                _logger.LogError(ex, "Error al obtener sucursales activas para ruta {Ruta}.", ruta);
             }
             return sucursales;
         }
