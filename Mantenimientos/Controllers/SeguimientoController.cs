@@ -6,6 +6,7 @@ using Mantenimientos.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace Mantenimientos.Controllers
 {
@@ -262,9 +263,7 @@ namespace Mantenimientos.Controllers
                         FECHA_INI_RE = model.FECHA_INI_RE,
                         FECHA_FIN_RE = model.FECHA_FIN_RE,
                         DIAS_ATRASO = diasDesfasados,
-                        OBSERVACIONES = !string.IsNullOrWhiteSpace(model.OBSERVACIONES)
-                            ? $"[{DateTime.Now:dd/MM/yyyy}]: {model.OBSERVACIONES.Trim()}"
-                            : null
+                        OBSERVACIONES = model.OBSERVACIONES
                     };
                     _context.Seguimientos.Add(nuevo);
                 }
@@ -280,14 +279,7 @@ namespace Mantenimientos.Controllers
                     existente.FECHA_INI_RE = model.FECHA_INI_RE;
                     existente.FECHA_FIN_RE = model.FECHA_FIN_RE;
                     existente.DIAS_ATRASO = diasDesfasados;
-
-                    if (!string.IsNullOrWhiteSpace(model.OBSERVACIONES))
-                    {
-                        string nuevaNota = $"[{DateTime.Now:dd/MM/yyyy}]: {model.OBSERVACIONES.Trim()}";
-                        existente.OBSERVACIONES = string.IsNullOrWhiteSpace(existente.OBSERVACIONES)
-                            ? nuevaNota
-                            : $"{nuevaNota}\n{existente.OBSERVACIONES}";
-                    }
+                    existente.OBSERVACIONES = model.OBSERVACIONES;
 
                     _context.Seguimientos.Update(existente);
                 }
