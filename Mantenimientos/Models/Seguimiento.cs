@@ -11,27 +11,17 @@ namespace Mantenimientos.Models
         public int ID { get; set; }
 
         [Required]
-        public int RUTA { get; set; }
-
-        [Required]
-        [MaxLength(200)]
-        public string SUCURSAL { get; set; } = string.Empty;
+        public int CLV_SUC { get; set; }
 
         [Column(TypeName = "date")]
-        public DateTime? FECHA_INI_ES { get; set; } = new DateTime(1900, 1, 1);
-        [Column(TypeName = "date")]
-        public DateTime? FECHA_FIN_ES { get; set; } = new DateTime(1900, 1, 1);
+        public DateTime? FECHA_INI_ES { get; set; }
 
         [Column(TypeName = "date")]
-        public DateTime? FECHA_INI_RE { get; set; } = new DateTime(1900, 1, 1);
-
-        [Column(TypeName = "date")]
-        public DateTime? FECHA_FIN_RE { get; set; } = new DateTime(1900, 1, 1);
+        public DateTime? FECHA_FIN_ES { get; set; }
 
         public int? DIAS_ATRASO { get; set; } = 0;
 
         [Column(TypeName = "nvarchar(max)")]
         public string? OBSERVACIONES { get; set; }
-
     }
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using Mantenimientos.Models;
+﻿using Mantenimientos.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Mantenimientos.Data
@@ -8,7 +7,6 @@ namespace Mantenimientos.Data
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
-        // Tablas principales
         public DbSet<Seguimiento> Seguimientos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -19,20 +17,17 @@ namespace Mantenimientos.Data
             {
                 entity.ToTable("Seguimientos");
                 entity.HasKey(e => e.ID);
-                entity.Property(e => e.RUTA).IsRequired();
-                entity.Property(e => e.CLV_SUC).IsRequired().HasMaxLength(200);
 
-                entity.Property(e => e.FECHA_INI_ES).HasColumnType("date").HasDefaultValue(new DateTime(1900, 1, 1));
-                entity.Property(e => e.FECHA_FIN_ES).HasColumnType("date").HasDefaultValue(new DateTime(1900, 1, 1));
-                entity.Property(e => e.FECHA_INI_RE).HasColumnType("date").HasDefaultValue(new DateTime(1900, 1, 1));
-                entity.Property(e => e.FECHA_FIN_RE).HasColumnType("date").HasDefaultValue(new DateTime(1900, 1, 1));
+                entity.Property(e => e.CLV_SUC).IsRequired();
+
+                entity.Property(e => e.FECHA_INI_ES).HasColumnType("date");
+                entity.Property(e => e.FECHA_FIN_ES).HasColumnType("date");
 
                 entity.Property(e => e.DIAS_ATRASO).HasDefaultValue(0);
                 entity.Property(e => e.OBSERVACIONES).HasColumnType("nvarchar(max)");
 
-                // filtros del index
-                entity.HasIndex(e => e.RUTA).HasDatabaseName("IX_Seguimiento_Ruta");
-                entity.HasIndex(e => e.CLV_SUC).HasDatabaseName("IX_Seguimiento_Sucursal");
+                // para filtros del Index
+                entity.HasIndex(e => e.CLV_SUC).HasDatabaseName("IX_Seguimiento_ClvSuc");
                 entity.HasIndex(e => e.FECHA_INI_ES).HasDatabaseName("IX_Seguimiento_FechaIniEst");
             });
         }
