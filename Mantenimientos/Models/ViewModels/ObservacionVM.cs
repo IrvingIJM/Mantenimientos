@@ -31,6 +31,8 @@ namespace Mantenimientos.Models.ViewModels
         [DataType(DataType.Date)]
         public DateTime? FECHA_FIN_RE { get; set; }
 
+        public int? DIAS_ATRASO { get; set; }
+
         [Display(Name = "Observaciones")]
         [DataType(DataType.MultilineText)]
         public string? OBSERVACIONES { get; set; }
@@ -38,5 +40,6 @@ namespace Mantenimientos.Models.ViewModels
         // Listas para los dropdown
         public List<SelectListItem> RutasDisponibles { get; set; } = new();
         public List<SelectListItem> SucursalesDisponibles { get; set; } = new();
+
     }
 }

@@ -20,7 +20,7 @@ namespace Mantenimientos.Data
                 entity.ToTable("Seguimientos");
                 entity.HasKey(e => e.ID);
                 entity.Property(e => e.RUTA).IsRequired();
-                entity.Property(e => e.SUCURSAL).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.CLV_SUC).IsRequired().HasMaxLength(200);
 
                 entity.Property(e => e.FECHA_INI_ES).HasColumnType("date").HasDefaultValue(new DateTime(1900, 1, 1));
                 entity.Property(e => e.FECHA_FIN_ES).HasColumnType("date").HasDefaultValue(new DateTime(1900, 1, 1));
@@ -32,7 +32,7 @@ namespace Mantenimientos.Data
 
                 // filtros del index
                 entity.HasIndex(e => e.RUTA).HasDatabaseName("IX_Seguimiento_Ruta");
-                entity.HasIndex(e => e.SUCURSAL).HasDatabaseName("IX_Seguimiento_Sucursal");
+                entity.HasIndex(e => e.CLV_SUC).HasDatabaseName("IX_Seguimiento_Sucursal");
                 entity.HasIndex(e => e.FECHA_INI_ES).HasDatabaseName("IX_Seguimiento_FechaIniEst");
             });
         }
