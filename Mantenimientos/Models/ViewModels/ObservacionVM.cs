@@ -21,6 +21,8 @@ namespace Mantenimientos.Models.ViewModels
         [Display(Name = "Región")]
         public int REGION { get; set; }
 
+        public string REGION_NOMBRE { get; set; } = string.Empty;
+
         // ── Fechas estimadas (editables) ───────────────────────────────────────
         [Display(Name = "Fecha Inicio Estimada")]
         [DataType(DataType.Date)]

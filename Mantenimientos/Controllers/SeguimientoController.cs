@@ -149,6 +149,14 @@ namespace Mantenimientos.Controllers
                 CLV_SUC = seguimiento.CLV_SUC,
                 SUCURSAL = sucInfo?.Nombre ?? seguimiento.CLV_SUC,
                 RUTA = sucInfo?.RUTA ?? 0,
+                REGION_NOMBRE = (sucInfo?.REGION ?? 0) switch
+                {
+                    11 => "Central",
+                    12 => "México",
+                    13 => "Norte",
+                    14 => "Sureste",
+                    _ => "Sin región"
+                },
                 REGION = sucInfo?.REGION ?? 0,
                 FECHA_INI_ES = seguimiento.FECHA_INI_ES,
                 FECHA_FIN_ES = seguimiento.FECHA_FIN_ES,
