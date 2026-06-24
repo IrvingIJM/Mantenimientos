@@ -16,7 +16,7 @@ namespace Mantenimientos.Models.ViewModels
         public int RUTA { get; set; }
 
         [Display(Name = "Sucursal")]
-        public string NOMBRE_SUCURSAL { get; set; } = string.Empty;
+        public string SUCURSAL { get; set; } = string.Empty;
 
         [Display(Name = "Región")]
         public int REGION { get; set; }

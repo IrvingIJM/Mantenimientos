@@ -9,17 +9,13 @@ namespace Mantenimientos.Models.ViewModels
 
         // ── Filtros ────────────────────────────────────────────────────────────
         public int? FiltroRuta { get; set; }
-        public int? FiltroRegion { get; set; }   // NUEVO
+        public int? FiltroRegion { get; set; }
         public int? FiltroMes { get; set; }
-        public int? FiltroAnio { get; set; }
-        public int? FiltroPeriodo { get; set; }   // NUEVO
-        public string? FiltroSucursal { get; set; }   // Valor = CLV_SUC
+        public int? FiltroPeriodo { get; set; }
 
         // ── Listas para los dropdowns ──────────────────────────────────────────
         public List<SelectListItem> RutasDisponibles { get; set; } = new();
-        public List<SelectListItem> SucursalesDisponibles { get; set; } = new();
         public List<SelectListItem> MesesDisponibles { get; set; } = new();
-        public List<SelectListItem> AniosDisponibles { get; set; } = new();
         public List<SelectListItem> RegionesDisponibles { get; set; } = new();  // NUEVO
         public List<SelectListItem> PeriodosDisponibles { get; set; } = new();  // NUEVO
     }
@@ -31,7 +27,7 @@ namespace Mantenimientos.Models.ViewModels
     {
         public int ID { get; set; }
         public string CLV_SUC { get; set; } = string.Empty;
-        public string NOMBRE_SUCURSAL { get; set; } = string.Empty;
+        public string SUCURSAL { get; set; } = string.Empty;
         public int RUTA { get; set; }
         public int REGION { get; set; }
         public DateTime? FECHA_INI_ES { get; set; }

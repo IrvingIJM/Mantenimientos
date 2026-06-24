@@ -255,7 +255,7 @@ namespace Mantenimientos.Services
                     {
                         ID = reader.GetInt32(reader.GetOrdinal("ID")),
                         CLV_SUC = reader["CLV_SUC"].ToString()!,
-                        NOMBRE_SUCURSAL = reader["NOMBRE_SUCURSAL"].ToString()!,
+                        SUCURSAL = reader["NOMBRE_SUCURSAL"].ToString()!,
                         RUTA = reader.GetByte(reader.GetOrdinal("RUTA")),
                         REGION = reader.GetByte(reader.GetOrdinal("REGION")),
                         FECHA_INI_ES = reader["FECHA_INI_ES"] as DateTime?,
@@ -304,7 +304,7 @@ namespace Mantenimientos.Services
     {
         public int ID { get; set; }
         public string CLV_SUC { get; set; } = string.Empty;
-        public string NOMBRE_SUCURSAL { get; set; } = string.Empty;
+        public string SUCURSAL { get; set; } = string.Empty;
         public byte RUTA { get; set; }
         public byte REGION { get; set; }
         public DateTime? FECHA_INI_ES { get; set; }

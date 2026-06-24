@@ -27,30 +27,22 @@ namespace Mantenimientos.Controllers
             _logger = logger;
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // GET  /Seguimiento/Index
-        // ══════════════════════════════════════════════════════════════════════
         public async Task<IActionResult> Index(
             int? filtroRuta,
             int? filtroRegion,
-            string? filtroSucursal,   // CLV_SUC
             int? filtroMes,
-            int? filtroAnio,
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
         {
             int periodo = filtroPeriodo ?? PeriodoDefault;
 
-            // ── Sincronizar DIAS_ATRASO con el periodo seleccionado ────────────
             await SincronizarDiasAtrasoAsync(periodo);
 
-            // ── Obtener datos con JOINs ───────────────────────────────────────
             var datos = await _empDataService.ObtenerSeguimientosAsync(
                 filtroRuta,
                 filtroRegion,
                 filtroMes,
-                filtroAnio,
-                filtroSucursal,
                 ocultarSinFecha,
                 periodo);
 
@@ -58,7 +50,7 @@ namespace Mantenimientos.Controllers
             {
                 ID = d.ID,
                 CLV_SUC = d.CLV_SUC,
-                NOMBRE_SUCURSAL = d.NOMBRE_SUCURSAL,
+                SUCURSAL = d.SUCURSAL,
                 RUTA = d.RUTA,
                 REGION = d.REGION,
                 FECHA_INI_ES = d.FECHA_INI_ES,
@@ -80,7 +72,7 @@ namespace Mantenimientos.Controllers
                 sucursalesFiltro = await _empDataService.ObtenerSucursalesPorRutaAsync(filtroRuta.Value);
             else
                 sucursalesFiltro = datos
-                    .Select(d => new SucursalDto { CLV_SUC = d.CLV_SUC, Nombre = d.NOMBRE_SUCURSAL })
+                    .Select(d => new SucursalDto { CLV_SUC = d.CLV_SUC, Nombre = d.SUCURSAL })
                     .DistinctBy(s => s.CLV_SUC)
                     .OrderBy(s => s.Nombre)
                     .ToList();
@@ -93,15 +85,6 @@ namespace Mantenimientos.Controllers
                     Selected = filtroMes.HasValue && filtroMes.Value == m
                 }).ToList();
 
-            var anios = Enumerable.Range(2023, (DateTime.Now.Year - 2023) + 2)
-                .OrderByDescending(a => a)
-                .Select(a => new SelectListItem
-                {
-                    Value = a.ToString(),
-                    Text = a.ToString(),
-                    Selected = filtroAnio.HasValue && filtroAnio.Value == a
-                }).ToList();
-
             ViewBag.OcultarSinFecha = ocultarSinFecha;
 
             var vm = new IndexVM
@@ -109,9 +92,7 @@ namespace Mantenimientos.Controllers
                 Seguimientos = seguimientos,
                 FiltroRuta = filtroRuta,
                 FiltroRegion = filtroRegion,
-                FiltroSucursal = filtroSucursal,
                 FiltroMes = filtroMes,
-                FiltroAnio = filtroAnio,
                 FiltroPeriodo = filtroPeriodo,
 
                 RutasDisponibles = rutas
@@ -130,16 +111,7 @@ namespace Mantenimientos.Controllers
                         Selected = filtroRegion.HasValue && filtroRegion.Value == r
                     }).ToList(),
 
-                SucursalesDisponibles = sucursalesFiltro
-                    .Select(s => new SelectListItem
-                    {
-                        Value = s.CLV_SUC,
-                        Text = s.Nombre,
-                        Selected = s.CLV_SUC == filtroSucursal
-                    }).ToList(),
-
                 MesesDisponibles = meses,
-                AniosDisponibles = anios,
 
                 PeriodosDisponibles = periodos
                     .Select(p => new SelectListItem
@@ -153,9 +125,7 @@ namespace Mantenimientos.Controllers
             return View(vm);
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // GET  /Seguimiento/Observacion/{id}
-        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> Observacion(int? id)
         {
@@ -177,7 +147,7 @@ namespace Mantenimientos.Controllers
             {
                 ID = seguimiento.ID,
                 CLV_SUC = seguimiento.CLV_SUC,
-                NOMBRE_SUCURSAL = sucInfo?.Nombre ?? seguimiento.CLV_SUC,
+                SUCURSAL = sucInfo?.Nombre ?? seguimiento.CLV_SUC,
                 RUTA = sucInfo?.RUTA ?? 0,
                 REGION = sucInfo?.REGION ?? 0,
                 FECHA_INI_ES = seguimiento.FECHA_INI_ES,
@@ -201,7 +171,7 @@ namespace Mantenimientos.Controllers
         public async Task<IActionResult> Observacion(ObservacionVM model)
         {
             // Quitar validaciones de campos que no se envían en el POST
-            ModelState.Remove(nameof(ObservacionVM.NOMBRE_SUCURSAL));
+            ModelState.Remove(nameof(ObservacionVM.SUCURSAL));
             ModelState.Remove(nameof(ObservacionVM.RUTA));
             ModelState.Remove(nameof(ObservacionVM.REGION));
             ModelState.Remove(nameof(ObservacionVM.FECHA_INI_RE));
@@ -213,7 +183,7 @@ namespace Mantenimientos.Controllers
                 // Recargar datos de solo lectura para re-mostrar la vista
                 var sucInfo = await _empDataService.ObtenerInfoSucursalAsync(model.CLV_SUC);
                 var fechasReales = await _empDataService.ObtenerFechasRealesAsync(model.CLV_SUC, PeriodoDefault);
-                model.NOMBRE_SUCURSAL = sucInfo?.Nombre ?? model.CLV_SUC;
+                model.SUCURSAL = sucInfo?.Nombre ?? model.CLV_SUC;
                 model.RUTA = sucInfo?.RUTA ?? 0;
                 model.REGION = sucInfo?.REGION ?? 0;
                 model.FECHA_INI_RE = fechasReales?.FechaInicio;
@@ -301,9 +271,7 @@ namespace Mantenimientos.Controllers
         public async Task<IActionResult> Exportar(
             int? filtroRuta,
             int? filtroRegion,
-            string? filtroSucursal,
             int? filtroMes,
-            int? filtroAnio,
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
         {
@@ -313,8 +281,7 @@ namespace Mantenimientos.Controllers
 
             var datos = await _empDataService.ObtenerSeguimientosAsync(
                 filtroRuta, filtroRegion,
-                filtroMes, filtroAnio,
-                filtroSucursal, ocultarSinFecha, periodo);
+                filtroMes, ocultarSinFecha, periodo);
 
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
@@ -363,7 +330,7 @@ namespace Mantenimientos.Controllers
             {
                 hoja.Cell(fila, "A").Value = d.RUTA;
                 hoja.Cell(fila, "B").Value = d.REGION;
-                hoja.Cell(fila, "C").Value = d.NOMBRE_SUCURSAL;
+                hoja.Cell(fila, "C").Value = d.SUCURSAL;
                 hoja.Cell(fila, "D").Value = FormatFechaExcel(d.FECHA_INI_ES);
                 hoja.Cell(fila, "E").Value = FormatFechaExcel(d.FECHA_FIN_ES);
                 hoja.Cell(fila, "F").Value = FormatFechaExcel(d.FECHA_INI_RE);

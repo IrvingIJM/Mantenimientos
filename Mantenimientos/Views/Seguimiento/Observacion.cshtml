@@ -21,6 +21,9 @@
         <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-circle p-2">
             <i class="bi bi-arrow-left"></i>
         </a>
+        <div>
+            <h1 class="h4 fw-bold mb-0">@ViewData["Title"]</h1>
+        </div>
     </div>
 
     <form asp-action="Observacion" method="post" id="formObservacion" novalidate>
@@ -32,22 +35,20 @@
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 d-flex align-items-center gap-2"
                  style="background:linear-gradient(135deg,#1D3557 0%,#457B9D 100%); color:#fff;">
-                <i class="bi bi-building me-1"></i>
                 <strong>Sucursal</strong>
-                <span class="badge bg-light text-dark ms-2 fw-normal">Solo lectura</span>
             </div>
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-12 col-md-4">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Ruta</label>
-                        <div class="form-control-plaintext fw-bold fs-5 text-primary ps-0">
-                            <i class="bi bi-signpost me-1"></i> @Model.RUTA
+                        <div class="form-control-plaintext fw-bold ps-0 text-dark">
+                            @Model.RUTA
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Región</label>
                         <div class="form-control-plaintext fw-semibold ps-0 text-dark">
-                            <i class="bi bi-geo me-1 text-secondary"></i> @Model.REGION
+                            @Model.REGION
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
@@ -59,18 +60,17 @@
                     <div class="col-12">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Nombre de Sucursal</label>
                         <div class="form-control-plaintext fw-bold text-dark ps-0 fs-5">
-                            <i class="bi bi-shop me-1 text-primary"></i> @Model.NOMBRE_SUCURSAL
+                            @Model.SUCURSAL
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ── Tarjeta: Fechas Estimadas (editables) ────────────────────── -->
+        <!-- Fechas Estimadas -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 d-flex align-items-center gap-2"
                  style="background:#e8f0fe; border-left:4px solid #1D3557;">
-                <i class="bi bi-calendar-event text-primary me-1"></i>
                 <strong class="text-primary">Fechas Estimadas</strong>
             </div>
             <div class="card-body">
@@ -111,13 +111,11 @@
             </div>
         </div>
 
-        <!-- ── Tarjeta: Fechas Reales (solo lectura — vienen de DBICET) ─── -->
+        <!-- Fechas Reales -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 d-flex align-items-center gap-2"
                  style="background:#e8f5e9; border-left:4px solid #2e7d32;">
-                <i class="bi bi-calendar-check text-success me-1"></i>
                 <strong class="text-success">Fechas Reales</strong>
-                <span class="badge bg-light text-dark ms-2 fw-normal">Solo lectura · fuente: DBICET</span>
             </div>
             <div class="card-body">
                 <div class="row g-4">
@@ -132,18 +130,14 @@
                                 <i class="bi bi-play-circle text-success"></i>
                             </span>
                             <input type="text"
-                                   class="form-control bg-light text-muted fst-italic"
+                                   class="form-control bg-light text-muted fst-normal"
                                    value="@FormatDisplay(Model.FECHA_INI_RE)"
                                    readonly
                                    id="displayFechaIniReal"
                                    tabindex="-1" />
-                            <!-- Campo oculto con valor ISO para calcularDesfase() -->
                             <input type="hidden" id="valorFechaIniReal"
                                    value="@FormatInput(Model.FECHA_INI_RE)" />
                         </div>
-                        <small class="text-muted">
-                            <i class="bi bi-lock me-1"></i>Actualizado automáticamente desde DBICET
-                        </small>
                     </div>
 
                     <!-- Fecha fin real -->
@@ -156,16 +150,13 @@
                                 <i class="bi bi-stop-circle text-success"></i>
                             </span>
                             <input type="text"
-                                   class="form-control bg-light text-muted fst-italic"
+                                   class="form-control bg-light text-muted fst-normal"
                                    value="@FormatDisplay(Model.FECHA_FIN_RE)"
                                    readonly
                                    tabindex="-1" />
                             <input type="hidden" id="valorFechaFinReal"
                                    value="@FormatInput(Model.FECHA_FIN_RE)" />
                         </div>
-                        <small class="text-muted">
-                            <i class="bi bi-lock me-1"></i>Actualizado automáticamente desde DBICET
-                        </small>
                     </div>
 
                 </div>
@@ -203,7 +194,7 @@
                     else
                     {
                         panelClass = "panel-ok";
-                        icono = "bi-check2-all text-success";
+                        icono = "text-success";
                         etiqueta = "EN TIEMPO";
                     }
 
@@ -211,9 +202,6 @@
                         <i class="bi @icono fs-2"></i>
                         <div>
                             <div class="fw-bold fs-5" id="textoDesfase">@etiqueta</div>
-                            <small class="text-muted">
-                                Comparando fecha estimada vs fecha real de inicio
-                            </small>
                         </div>
                     </div>
                 }
@@ -223,7 +211,7 @@
                         <i class="bi bi-clock text-secondary fs-2"></i>
                         <div>
                             <div class="fw-bold fs-5">No iniciado</div>
-                            <small class="text-muted">Aún no existe fecha real registrada en DBICET</small>
+                            <small class="text-muted">Aún no existe fecha real registrada</small>
                         </div>
                     </div>
                 }
@@ -238,7 +226,7 @@
                     </div>
                 }
 
-                <!-- Panel dinámico (se actualiza al cambiar fechas estimadas) -->
+                <!-- Panel dinámico -->
                 <div id="panelDesfaseDinamico" class="mt-3 p-3 rounded-3 d-none d-flex align-items-center gap-3">
                     <i class="bi fs-2" id="iconoDesfaseDinamico"></i>
                     <div>
@@ -250,7 +238,7 @@
             </div>
         </div>
 
-        <!-- ── Tarjeta: Observaciones (máx. 200 palabras) ───────────────── -->
+        <!-- Observaciones -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 bg-white border-bottom d-flex align-items-center gap-2">
                 <i class="bi bi-chat-square-text text-primary me-1"></i>
@@ -259,36 +247,17 @@
             <div class="card-body">
                 <label asp-for="OBSERVACIONES" class="form-label fw-semibold">
                     Detalle del mantenimiento
-                    <span class="text-muted fw-normal">(máximo 200 palabras)</span>
                 </label>
                 <textarea name="OBSERVACIONES"
                           class="form-control"
                           rows="5"
                           id="txtObservaciones"
-                          placeholder="Describe el estado del mantenimiento...">@Model.OBSERVACIONES</textarea>
-
-                <!-- Barra de progreso y contador -->
-                <div class="d-flex justify-content-between align-items-center mt-2">
-                    <div class="progress flex-grow-1 me-3" style="height:6px;">
-                        <div id="barraProgreso"
-                             class="progress-bar"
-                             role="progressbar"
-                             style="width:0%; background-color:#1D3557;"
-                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                        </div>
-                    </div>
-                    <small id="contadorPalabras" class="text-muted fw-semibold">0 / 200 palabras</small>
-                </div>
-                <div id="alertaPalabras" class="mt-2 d-none">
-                    <small class="text-danger fw-semibold">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        Límite de 200 palabras alcanzado.
-                    </small>
-                </div>
+                          placeholder="Describe el estado del mantenimiento.">@Model.OBSERVACIONES
+                </textarea>
             </div>
         </div>
 
-        <!-- ── Botones de acción ─────────────────────────────────────────── -->
+        <!-- Botones de acción -->
         <div class="d-flex gap-3 justify-content-end pt-2">
             <a asp-action="Index" class="btn btn-outline-secondary px-4">
                 <i class="bi bi-x-circle me-1"></i>Cancelar
@@ -340,83 +309,6 @@
     }
 
     <script>
-        // ─────────────────────────────────────────────────────────────────────────
-        // 1. CONTADOR Y LÍMITE DE 200 PALABRAS
-        // ─────────────────────────────────────────────────────────────────────────
-        const MAX_PALABRAS = 200;
-        const txtObs       = document.getElementById('txtObservaciones');
-        const contador     = document.getElementById('contadorPalabras');
-        const barra        = document.getElementById('barraProgreso');
-        const alertaMax    = document.getElementById('alertaPalabras');
-
-        function contarPalabras(texto) {
-            const limpio = texto.trim();
-            return limpio === '' ? 0 : limpio.split(/\s+/).length;
-        }
-
-        function actualizarContador() {
-            const palabras = contarPalabras(txtObs.value);
-            const pct      = Math.min((palabras / MAX_PALABRAS) * 100, 100);
-
-            contador.textContent = `${palabras} / ${MAX_PALABRAS} palabras`;
-
-            barra.style.width       = pct + '%';
-            barra.setAttribute('aria-valuenow', pct);
-
-            if (palabras >= MAX_PALABRAS) {
-                barra.style.backgroundColor = '#dc3545';
-                contador.className          = 'text-danger fw-semibold';
-                alertaMax.classList.remove('d-none');
-            } else if (palabras >= MAX_PALABRAS * 0.85) {
-                barra.style.backgroundColor = '#ffc107';
-                contador.className          = 'text-warning fw-semibold';
-                alertaMax.classList.add('d-none');
-            } else {
-                barra.style.backgroundColor = '#1D3557';
-                contador.className          = 'text-muted fw-semibold';
-                alertaMax.classList.add('d-none');
-            }
-        }
-
-        // Impedir que se escriba más de 200 palabras
-        txtObs.addEventListener('keydown', function (e) {
-            const permitidas = ['Backspace','Delete','ArrowLeft','ArrowRight',
-                                'ArrowUp','ArrowDown','Home','End','Tab'];
-            if (permitidas.includes(e.key)) return;
-            if (e.ctrlKey || e.metaKey)    return; // Ctrl+A, Ctrl+C, etc.
-
-            if (contarPalabras(this.value) >= MAX_PALABRAS) {
-                // Solo se bloquea si la última pulsación no borra texto
-                const selLen = window.getSelection()?.toString().length ?? 0;
-                if (selLen === 0) {
-                    e.preventDefault();
-                    alertaMax.classList.remove('d-none');
-                }
-            }
-        });
-
-        // También recortar si se pega texto que supera el límite
-        txtObs.addEventListener('paste', function (e) {
-            e.preventDefault();
-            const pegado     = (e.clipboardData || window.clipboardData).getData('text');
-            const actual     = this.value;
-            const palabrasAct = contarPalabras(actual);
-            const palabrasPeg = contarPalabras(pegado);
-
-            if (palabrasAct >= MAX_PALABRAS) return;
-
-            const restante = MAX_PALABRAS - palabrasAct;
-            const tokens   = pegado.trim().split(/\s+/).slice(0, restante);
-            const start    = this.selectionStart;
-            const end      = this.selectionEnd;
-            const nuevoVal = actual.slice(0, start) + tokens.join(' ') + actual.slice(end);
-            this.value = nuevoVal;
-            actualizarContador();
-        });
-
-        txtObs.addEventListener('input', actualizarContador);
-        actualizarContador(); // Inicializar al cargar
-
         // ─────────────────────────────────────────────────────────────────────────
         // 2. PANEL DINÁMICO DE DESFASE
         //    Se actualiza al cambiar las fechas estimadas, usando la fecha real

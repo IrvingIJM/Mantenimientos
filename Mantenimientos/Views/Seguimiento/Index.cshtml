@@ -47,7 +47,14 @@
                             <option value="">— Todas —</option>
                             @foreach (var item in Model.RutasDisponibles)
                             {
-                                <option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</option>
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
                             }
                         </select>
                     </div>
@@ -57,11 +64,18 @@
                         <label class="form-label fw-bold text-muted small text-uppercase">Región</label>
                         <select name="filtroRegion" id="filtroRegion" class="form-select border-2">
                             <option value="">— Todas —</option>
-                            @foreach (var item in Model.RegionesDisponibles)
-                            {
-                                <option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</option>
-                            }
-                        </select>
+                                @foreach (var item in Model.RegionesDisponibles)
+                                {
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                                }
+                            </select>
                     </div>
 
                     <!-- Mes -->
@@ -69,22 +83,36 @@
                         <label class="form-label fw-bold text-muted small text-uppercase">Mes</label>
                         <select name="filtroMes" id="filtroMes" class="form-select border-2">
                             <option value="">— Todos —</option>
-                            @foreach (var item in Model.MesesDisponibles)
-                            {
-                                <option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</option>
-                            }
-                        </select>
+                                @foreach (var item in Model.MesesDisponibles)
+                                {
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                                }
+                            </select>
                     </div>
 
                     <!-- Periodo -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Periodo</label>
                         <select name="filtroPeriodo" id="filtroPeriodo" class="form-select border-2">
-                            @foreach (var item in Model.PeriodosDisponibles)
-                            {
-                                <option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</option>
-                            }
-                        </select>
+                                @foreach (var item in Model.PeriodosDisponibles)
+                                {
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                                }
+                            </select>
                     </div>
 
                 </div>
@@ -175,7 +203,7 @@
                             <tr class="@(esAtrasado ? "table-danger" : "")">
                                 <td class="ps-3 fw-bold text-primary">@item.RUTA</td>
                                 <td class="text-muted">@item.REGION</td>
-                                <td class="fw-semibold text-dark">@item.NOMBRE_SUCURSAL</td>
+                                <td class="fw-semibold text-dark">@item.SUCURSAL</td>
                                 <td>@FormatFecha(item.FECHA_INI_ES)</td>
                                 <td>@FormatFecha(item.FECHA_FIN_ES)</td>
                                 <td>@FormatFecha(item.FECHA_INI_RE)</td>
