@@ -18,17 +18,28 @@ namespace Mantenimientos.Data
                 entity.ToTable("Seguimientos");
                 entity.HasKey(e => e.ID);
 
-                entity.Property(e => e.CLV_SUC).IsRequired();
+                entity.Property(e => e.CLV_SUC)
+                      .IsRequired()
+                      .HasMaxLength(50);
 
-                entity.Property(e => e.FECHA_INI_ES).HasColumnType("date");
-                entity.Property(e => e.FECHA_FIN_ES).HasColumnType("date");
+                entity.Property(e => e.FECHA_INI_ES)
+                      .HasColumnType("date");
 
-                entity.Property(e => e.DIAS_ATRASO).HasDefaultValue(0);
-                entity.Property(e => e.OBSERVACIONES).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.FECHA_FIN_ES)
+                      .HasColumnType("date");
 
-                // para filtros del Index
-                entity.HasIndex(e => e.CLV_SUC).HasDatabaseName("IX_Seguimiento_ClvSuc");
-                entity.HasIndex(e => e.FECHA_INI_ES).HasDatabaseName("IX_Seguimiento_FechaIniEst");
+                entity.Property(e => e.DIAS_ATRASO)
+                      .HasDefaultValue(0);
+
+                entity.Property(e => e.OBSERVACIONES)
+                      .HasColumnType("nvarchar(max)");
+
+                // Índices para filtros
+                entity.HasIndex(e => e.CLV_SUC)
+                      .HasDatabaseName("IX_Seguimiento_ClvSuc");
+
+                entity.HasIndex(e => e.FECHA_INI_ES)
+                      .HasDatabaseName("IX_Seguimiento_FechaIniEst");
             });
         }
     }
