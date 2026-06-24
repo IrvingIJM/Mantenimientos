@@ -30,7 +30,7 @@
         </div>
     }
 
-    <!-- ── Filtros ─────────────────────────────────────────────────────────── -->
+    <!-- Filtros -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header py-3 d-flex align-items-center gap-2"
              style="color:#ffffff; background:linear-gradient(135deg,#1D3557 0%,#457B9D 100%);">
@@ -52,24 +52,12 @@
                         </select>
                     </div>
 
-                    <!-- Región (NUEVO) -->
+                    <!-- Región -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Región</label>
                         <select name="filtroRegion" id="filtroRegion" class="form-select border-2">
                             <option value="">— Todas —</option>
                             @foreach (var item in Model.RegionesDisponibles)
-                            {
-                                <option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</option>
-                            }
-                        </select>
-                    </div>
-
-                    <!-- Sucursal -->
-                    <div class="col-12 col-md-3">
-                        <label class="form-label fw-bold text-muted small text-uppercase">Sucursal</label>
-                        <select name="filtroSucursal" id="filtroSucursal" class="form-select border-2">
-                            <option value="">— Todas —</option>
-                            @foreach (var item in Model.SucursalesDisponibles)
                             {
                                 <option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</option>
                             }
@@ -88,19 +76,7 @@
                         </select>
                     </div>
 
-                    <!-- Año -->
-                    <div class="col-12 col-md-1">
-                        <label class="form-label fw-bold text-muted small text-uppercase">Año</label>
-                        <select name="filtroAnio" id="filtroAnio" class="form-select border-2">
-                            <option value="">— Todos —</option>
-                            @foreach (var item in Model.AniosDisponibles)
-                            {
-                                <option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</option>
-                            }
-                        </select>
-                    </div>
-
-                    <!-- Periodo (NUEVO) -->
+                    <!-- Periodo -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Periodo</label>
                         <select name="filtroPeriodo" id="filtroPeriodo" class="form-select border-2">
@@ -113,7 +89,7 @@
 
                 </div>
 
-                <!-- Switch ocultar sin fecha -->
+                <!-- ocultar sin fecha -->
                 <div class="row mt-3">
                     <div class="col-12">
                         <div class="form-check form-switch ps-5">
@@ -121,7 +97,7 @@
                                    name="ocultarSinFecha" id="ocultarSinFecha" value="true"
                                    @(ViewBag.OcultarSinFecha == true ? "checked" : "")>
                             <label class="form-check-label fw-semibold text-dark ms-2" for="ocultarSinFecha">
-                                <i class="bi bi-eye-slash-fill text-warning me-1"></i> Ocultar sin fecha real
+                                <i class="bi bi-eye-slash-fill text-warning me-1"></i> Ocultar sin fecha
                             </label>
                         </div>
                     </div>
@@ -151,7 +127,7 @@
         </div>
     </div>
 
-    <!-- ── Tabla de resultados ─────────────────────────────────────────────── -->
+    <!-- Tabla de resultados -->
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
             <span class="fw-bold text-dark m-0"></span>

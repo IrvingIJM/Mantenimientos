@@ -36,7 +36,7 @@ namespace Mantenimientos.Services
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
-                    lista.Add(reader.GetInt32(0));
+                    lista.Add(Convert.ToInt32(reader.GetByte(0)));
             }
             catch (Exception ex) { _logger.LogError(ex, "Error al obtener rutas."); }
             return lista;
@@ -60,7 +60,7 @@ namespace Mantenimientos.Services
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
-                    lista.Add(reader.GetInt32(0));
+                    lista.Add(Convert.ToInt32(reader.GetByte(0)));
             }
             catch (Exception ex) { _logger.LogError(ex, "Error al obtener regiones."); }
             return lista;
@@ -256,8 +256,8 @@ namespace Mantenimientos.Services
                         ID = reader.GetInt32(reader.GetOrdinal("ID")),
                         CLV_SUC = reader["CLV_SUC"].ToString()!,
                         NOMBRE_SUCURSAL = reader["NOMBRE_SUCURSAL"].ToString()!,
-                        RUTA = reader.GetInt32(reader.GetOrdinal("RUTA")),
-                        REGION = reader.GetInt32(reader.GetOrdinal("REGION")),
+                        RUTA = reader.GetByte(reader.GetOrdinal("RUTA")),
+                        REGION = reader.GetByte(reader.GetOrdinal("REGION")),
                         FECHA_INI_ES = reader["FECHA_INI_ES"] as DateTime?,
                         FECHA_FIN_ES = reader["FECHA_FIN_ES"] as DateTime?,
                         FECHA_INI_RE = (fi.HasValue && fi.Value > FechaDefault) ? fi : null,
@@ -280,8 +280,8 @@ namespace Mantenimientos.Services
         {
             CLV_SUC = r["CLV_SUC"].ToString()!,
             Nombre = r["Sucursal"].ToString()!,
-            RUTA = r.GetInt32(r.GetOrdinal("RUTA")),
-            REGION = r.GetInt32(r.GetOrdinal("ID_REG"))
+            RUTA = r.GetByte(r.GetOrdinal("RUTA")),
+            REGION = r.GetByte(r.GetOrdinal("ID_REG"))
         };
     }
 
@@ -290,8 +290,8 @@ namespace Mantenimientos.Services
     {
         public string CLV_SUC { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
-        public int RUTA { get; set; }
-        public int REGION { get; set; }
+        public byte RUTA { get; set; }
+        public byte REGION { get; set; }
     }
 
     public class FechasRealesDto
@@ -305,8 +305,8 @@ namespace Mantenimientos.Services
         public int ID { get; set; }
         public string CLV_SUC { get; set; } = string.Empty;
         public string NOMBRE_SUCURSAL { get; set; } = string.Empty;
-        public int RUTA { get; set; }
-        public int REGION { get; set; }
+        public byte RUTA { get; set; }
+        public byte REGION { get; set; }
         public DateTime? FECHA_INI_ES { get; set; }
         public DateTime? FECHA_FIN_ES { get; set; }
         public DateTime? FECHA_INI_RE { get; set; }
