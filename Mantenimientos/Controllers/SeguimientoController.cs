@@ -61,12 +61,12 @@ namespace Mantenimientos.Controllers
                 OBSERVACIONES = d.OBSERVACIONES
             }).ToList();
 
-            // ── Catálogos para los filtros ────────────────────────────────────
+            // Catálogos para los filtros 
             var rutas = await _empDataService.ObtenerRutasAsync();
             var regiones = await _empDataService.ObtenerRegionesAsync();
             var periodos = await _empDataService.ObtenerPeriodosAsync();
 
-            // Sucursales del filtro de ruta seleccionada (o todas si no hay ruta)
+            // Sucursales del filtro de ruta seleccionada o todas si no hay ruta
             List<SucursalDto> sucursalesFiltro;
             if (filtroRuta.HasValue)
                 sucursalesFiltro = await _empDataService.ObtenerSucursalesPorRutaAsync(filtroRuta.Value);
