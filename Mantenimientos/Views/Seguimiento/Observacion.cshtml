@@ -75,12 +75,9 @@
                 <div class="row g-4">
                     <div class="col-12 col-md-6">
                         <label asp-for="FECHA_INI_ES" class="form-label fw-semibold">
-                            Fecha Inicio Estimada
+                            Fecha Inicio
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light">
-                                <i class="bi bi-calendar-plus text-primary"></i>
-                            </span>
                             <input name="FECHA_INI_ES"
                                    type="date"
                                    class="form-control"
@@ -91,12 +88,9 @@
                     </div>
                     <div class="col-12 col-md-6">
                         <label asp-for="FECHA_FIN_ES" class="form-label fw-semibold">
-                            Fecha Término Estimada
+                            Fecha Término
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light">
-                                <i class="bi bi-calendar-minus text-primary"></i>
-                            </span>
                             <input name="FECHA_FIN_ES"
                                    type="date"
                                    class="form-control"
@@ -119,12 +113,9 @@
 
                     <div class="col-12 col-md-6">
                         <label class="form-label fw-semibold text-muted small text-uppercase">
-                            Fecha Inicio Real
+                            Fecha Inicio
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text bg-success-subtle">
-                                <i class="bi bi-play-circle text-success"></i>
-                            </span>
                             <input type="text"
                                    class="form-control bg-light text-muted fst-normal"
                                    value="@FormatDisplay(Model.FECHA_INI_RE)"
@@ -138,12 +129,9 @@
 
                     <div class="col-12 col-md-6">
                         <label class="form-label fw-semibold text-muted small text-uppercase">
-                            Fecha Término Real
+                            Fecha Término
                         </label>
                         <div class="input-group">
-                            <span class="input-group-text bg-success-subtle">
-                                <i class="bi bi-stop-circle text-success"></i>
-                            </span>
                             <input type="text"
                                    class="form-control bg-light text-muted fst-normal"
                                    value="@FormatDisplay(Model.FECHA_FIN_RE)"
@@ -165,35 +153,30 @@
 
                 @if (tieneIniEst && tieneIniReal)
                 {
-                    string panelClass, icono, etiqueta;
+                    string panelClass, etiqueta;
                     if (!tieneFinReal)
                     {
                         panelClass = "panel-en-proceso";
-                        icono = "bi-hourglass-split text-warning";
                         etiqueta = "En proceso";
                     }
                     else if (dias > 0)
                     {
                         panelClass = "panel-atraso";
-                        icono = "bi-exclamation-triangle text-danger";
                         etiqueta = $"{dias} día{(dias == 1 ? "" : "s")} de atraso";
                     }
                     else if (dias < 0)
                     {
                         panelClass = "panel-adelanto";
-                        icono = "bi-check-circle text-primary";
                         etiqueta = $"{Math.Abs(dias ?? 0)} día{(Math.Abs(dias ?? 0) == 1 ? "" : "s")} de adelanto";
                     }
                     else
                     {
                         panelClass = "panel-ok";
-                        icono = "bi-check2-all text-success";
                         etiqueta = "EN TIEMPO";
                     }
 
                     <div id="panelDesfaseServidor"
                          class="mt-4 p-3 rounded-3 d-flex align-items-center gap-3 @panelClass">
-                        <i class="bi @icono fs-2"></i>
                         <div>
                             <div class="fw-bold fs-5" id="textoDesfase">@etiqueta</div>
                         </div>
@@ -203,7 +186,6 @@
                 {
                     <div id="panelDesfaseServidor"
                          class="mt-4 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-inicio">
-                        <i class="bi bi-clock text-secondary fs-2"></i>
                         <div>
                             <div class="fw-bold fs-5">No iniciado</div>
                             <small class="text-muted">Aún no existe fecha real registrada</small>
@@ -214,7 +196,6 @@
                 {
                     <div id="panelDesfaseServidor"
                          class="mt-4 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-programar">
-                        <i class="bi bi-calendar-x text-secondary fs-2"></i>
                         <div>
                             <div class="fw-bold fs-5">Sin programar</div>
                             <small class="text-muted">Agrega una fecha estimada para ver el desfase</small>
@@ -232,7 +213,6 @@
 
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 bg-white border-bottom d-flex align-items-center gap-2">
-                <i class="bi bi-chat-square-text text-primary me-1"></i>
                 <strong>Observaciones</strong>
             </div>
             <div class="card-body">
@@ -251,11 +231,11 @@
 
         <div class="d-flex gap-3 justify-content-end pt-2">
             <a asp-action="Index" class="btn btn-outline-secondary px-4">
-                <i class="bi bi-x-circle me-1"></i>Cancelar
+                Cancelar
             </a>
             <button type="submit" class="btn btn-primary px-5 shadow-sm"
                     style="background-color:#1D3557; border-color:#1D3557;">
-                <i class="bi bi-check-circle me-2"></i>Actualizar Registro
+                Actualizar Registro
             </button>
         </div>
     </form>
@@ -307,14 +287,13 @@
             const fechaIniEstStr  = document.getElementById('inputFechaIniEst')?.value  || '';
             const fechaIniRealStr = document.getElementById('valorFechaIniReal')?.value || '';
 
-            // CASO 1: El usuario borró la fecha de inicio estimada
+            // CASO 1: Sin fecha estimada
             if (!fechaIniEstStr) {
                 panelDin.classList.add('d-none');
 
                 if (panelServidor) {
                     panelServidor.className = 'mt-4 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-programar';
                     panelServidor.innerHTML = `
-                        <i class="bi bi-calendar-x text-secondary fs-2"></i>
                         <div>
                             <div class="fw-bold fs-5">Sin programar</div>
                             <small class="text-muted">Agrega una fecha estimada para ver el desfase</small>
@@ -325,48 +304,47 @@
                 return;
             }
 
-            // Ocultamos el panel original del servidor si hay una fecha estimada para que no se dupliquen
+            // Ocultar panel estático
             if (panelServidor) {
                 panelServidor.classList.add('d-none');
             }
 
-            // CASO 2: Hay f. Estimada pero no hay fecha real en base de datos
+            // CASO 2: Sin fecha real registrada
             if (!fechaIniRealStr) {
                 panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-inicio';
-                textoDin.innerHTML = `<i class="bi bi-clock text-secondary fs-4 me-2"></i> Sin iniciar — vista previa no disponible`;
+                textoDin.innerHTML = `Sin iniciar — vista previa no disponible`;
                 panelDin.classList.remove('d-none');
                 return;
             }
 
-            // CASO 3: Cálculo matemático exacto (Evitando errores de huso horario UTC)
+            // Parseo seguro
             const est  = new Date(fechaIniEstStr + 'T00:00:00');
             const real = new Date(fechaIniRealStr + 'T00:00:00');
 
             const diffTime = real.getTime() - est.getTime();
             const diff = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-            // Evaluamos y añadimos los iconos correctos usando "bi bi-..."
+            // Renderizado de texto puro sin iconos
             if (diff > 0) {
                 panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-atraso';
-                textoDin.innerHTML = `<i class="bi bi-exclamation-triangle text-danger fs-4 me-2"></i> ${diff} día${diff === 1 ? '' : 's'} de atraso`;
+                textoDin.innerHTML = `${diff} día${diff === 1 ? '' : 's'} de atraso`;
             } else if (diff < 0) {
                 const diasAdelanto = Math.abs(diff);
                 panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-adelanto';
-                textoDin.innerHTML = `<i class="bi bi-check-circle text-primary fs-4 me-2"></i> ${diasAdelanto} día${diasAdelanto === 1 ? '' : 's'} de adelanto`;
+                textoDin.innerHTML = `${diasAdelanto} día${diasAdelanto === 1 ? '' : 's'} de adelanto`;
             } else {
                 panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-ok';
-                textoDin.innerHTML = `<i class="bi bi-check2-all text-success fs-4 me-2"></i> EN TIEMPO`;
+                textoDin.innerHTML = `EN TIEMPO`;
             }
 
-            // Muestra el panel dinámico con los estilos aplicados
             panelDin.classList.remove('d-none');
         }
 
-        // Recalcular al cambiar fechas estimadas
+        // Event listeners
         document.getElementById('inputFechaIniEst')?.addEventListener('change', calcularDesfase);
         document.getElementById('inputFechaFinEst')?.addEventListener('change', calcularDesfase);
 
-        // Calcular al cargar la página
+        // Inicialización al cargar la página
         window.addEventListener('DOMContentLoaded', calcularDesfase);
     </script>
 }

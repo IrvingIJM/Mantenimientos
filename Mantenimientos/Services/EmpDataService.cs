@@ -50,19 +50,30 @@ namespace Mantenimientos.Services
             {
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
+
                 const string sql = @"
-                    SELECT DISTINCT suc.ID_REG
-                    FROM   Iker.dbo.Sucursales   suc
-                    INNER JOIN mttos.dbo.Seguimientos s ON s.CLV_SUC = suc.CLV_SUC
-                    WHERE  suc.ACTIVO  = 1
-                      AND  suc.ID_REG IS NOT NULL
-                    ORDER BY suc.ID_REG";
+            SELECT DISTINCT suc.ID_REG
+            FROM   Iker.dbo.Sucursales   suc
+            INNER JOIN mttos.dbo.Seguimientos s ON s.CLV_SUC = suc.CLV_SUC
+            WHERE  suc.ACTIVO = 1
+              AND  suc.ID_REG IS NOT NULL
+            ORDER BY suc.ID_REG";
+
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
+
                 while (await reader.ReadAsync())
-                    lista.Add(Convert.ToInt32(reader.GetByte(0)));
+                {
+                    if (!reader.IsDBNull(0))
+                    {
+                        lista.Add(Convert.ToInt32(reader.GetByte(0)));
+                    }
+                }
             }
-            catch (Exception ex) { _logger.LogError(ex, "Error al obtener regiones."); }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener regiones.");
+            }
             return lista;
         }
 
@@ -74,17 +85,27 @@ namespace Mantenimientos.Services
             {
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
+
                 const string sql = @"
-                    SELECT DISTINCT id_periodo
-                    FROM   Iker.dbo.DBICET
-                    WHERE  id_periodo IS NOT NULL
-                    ORDER BY id_periodo DESC";
+            SELECT DISTINCT id_periodo
+            FROM   Iker.dbo.DBICET
+            WHERE  id_periodo IS NOT NULL
+            ORDER BY id_periodo DESC";
+
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
-                    lista.Add(reader.GetInt32(0));
+                {
+                    if (!reader.IsDBNull(0))
+                    {
+                        lista.Add(reader.GetByte(0));
+                    }
+                }
             }
-            catch (Exception ex) { _logger.LogError(ex, "Error al obtener periodos."); }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener periodos.");
+            }
             return lista;
         }
 
