@@ -255,7 +255,7 @@ namespace Mantenimientos.Services
                 }
                 if (filtroMes.HasValue)
                 {
-                    sql.Append(" AND MONTH(s.FECHA_INI_ES) = @Mes");
+                    sql.Append(" AND MONTH(dbr.F_Inicio) = @Mes");
                     cmd.Parameters.AddWithValue("@Mes", filtroMes.Value);
                 }
                 if (ocultarSinFecha)

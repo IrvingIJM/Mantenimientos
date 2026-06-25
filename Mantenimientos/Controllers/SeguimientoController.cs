@@ -101,7 +101,7 @@ namespace Mantenimientos.Controllers
                 MesesDisponibles = Enumerable.Range(1, 12).Select(m => new SelectListItem
                 {
                     Value = m.ToString(),
-                    Text = CultureInfo.GetCultureInfo("es-ES").DateTimeFormat.GetMonthName(m),
+                    Text = CultureInfo.GetCultureInfo("re-RE").DateTimeFormat.GetMonthName(m),
                     Selected = (m == filtroMes)
                 }).ToList()
             };
