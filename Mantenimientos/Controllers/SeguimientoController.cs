@@ -65,7 +65,6 @@ namespace Mantenimientos.Controllers
             {
                 Seguimientos = datos,
 
-                // mantener los filtros seleccionados para que la vista los recupere
                 FiltroRuta = filtroRuta,
                 FiltroRegion = filtroRegion,
                 FiltroMes = filtroMes,
@@ -109,7 +108,6 @@ namespace Mantenimientos.Controllers
 
             ViewBag.OcultarSinFecha = ocultarSinFecha;
 
-            // también exponer filtros en ViewBag por compatibilidad con la vista
             ViewBag.FiltroRuta = filtroRuta;
             ViewBag.FiltroRegion = filtroRegion;
             ViewBag.FiltroMes = filtroMes;
@@ -129,10 +127,8 @@ namespace Mantenimientos.Controllers
             if (seguimiento == null)
                 return NotFound();
 
-            // Datos del JOIN con Sucursales
             var sucInfo = await _empDataService.ObtenerInfoSucursalAsync(seguimiento.CLV_SUC);
 
-            // Fechas reales del periodo por defecto
             var fechasReales = await _empDataService.ObtenerFechasRealesAsync(
                 seguimiento.CLV_SUC, PeriodoDefault);
 
@@ -167,7 +163,6 @@ namespace Mantenimientos.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Observacion(ObservacionVM model)
         {
-            // Quitar validaciones de campos que no se envían en el POST
             ModelState.Remove(nameof(ObservacionVM.SUCURSAL));
             ModelState.Remove(nameof(ObservacionVM.RUTA));
             ModelState.Remove(nameof(ObservacionVM.REGION));
@@ -275,13 +270,6 @@ namespace Mantenimientos.Controllers
             hoja.Style.Font.FontName = "Arial";
             hoja.Style.Font.FontSize = 10;
 
-            // Encabezados
-            hoja.Cell("A3").Value = "Ruta";
-            hoja.Range("A3:A4").Merge();
-
-            hoja.Cell("B3").Value = "Región";
-            hoja.Range("B3:B4").Merge();
-
             hoja.Cell("C3").Value = "Centro de Ventas";
             hoja.Range("C3:C4").Merge();
 
@@ -302,7 +290,7 @@ namespace Mantenimientos.Controllers
             hoja.Cell("F4").Value = "Inicio";
             hoja.Cell("G4").Value = "Fin";
 
-            var rango = hoja.Range("A3:I4");
+            var rango = hoja.Range("C3:I4");
             rango.Style
                  .Font.SetBold(true)
                  .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
@@ -314,8 +302,6 @@ namespace Mantenimientos.Controllers
             int fila = 5;
             foreach (var d in datos)
             {
-                hoja.Cell(fila, "A").Value = d.RUTA;
-                hoja.Cell(fila, "B").Value = d.REGION;
                 hoja.Cell(fila, "C").Value = d.SUCURSAL;
                 hoja.Cell(fila, "D").Value = FormatFechaExcel(d.FECHA_INI_ES);
                 hoja.Cell(fila, "E").Value = FormatFechaExcel(d.FECHA_FIN_ES);
@@ -324,7 +310,7 @@ namespace Mantenimientos.Controllers
                 hoja.Cell(fila, "H").Value = d.DIAS_ATRASO;
                 hoja.Cell(fila, "I").Value = d.OBSERVACIONES ?? string.Empty;
 
-                hoja.Range(fila, 1, fila, 9).Style
+                hoja.Range(fila, 3, fila, 9).Style
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetInsideBorder(XLBorderStyleValues.Thin);
                 hoja.Range(fila, 4, fila, 8).Style
@@ -333,14 +319,14 @@ namespace Mantenimientos.Controllers
                 fila++;
             }
 
-            hoja.Columns("A:I").AdjustToContents();
+            hoja.Columns("C:I").AdjustToContents();
 
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
             return File(
                 ms.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Mantenimientos_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+                $"Fechas_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
         // AJAX — Carga dinámica de sucursales para el filtro
