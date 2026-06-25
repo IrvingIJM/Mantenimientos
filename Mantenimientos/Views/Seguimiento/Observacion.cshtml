@@ -13,7 +13,7 @@
             ? fecha.Value.ToString("dd/MM/yyyy")
             : "—";
 }
-
+<!-- Encabezado -->
 <div class="container py-4" style="max-width:860px;">
 
     <div class="d-flex align-items-center mb-4 gap-3">
@@ -31,6 +31,7 @@
         <input type="hidden" asp-for="ID" />
         <input type="hidden" asp-for="CLV_SUC" />
 
+        <!-- datos de la Sucursal -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 d-flex align-items-center gap-2"
                  style="background:linear-gradient(135deg,#1D3557 0%,#457B9D 100%); color:#fff;">
@@ -66,6 +67,7 @@
             </div>
         </div>
 
+        <!-- Fechas Estimadas -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 d-flex align-items-center gap-2"
                  style="background:#e8f0fe;">
@@ -103,6 +105,7 @@
             </div>
         </div>
 
+        <!-- Fechas Reales -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 d-flex align-items-center gap-2"
                  style="background:#e8f5e9;">

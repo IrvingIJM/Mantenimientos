@@ -4,14 +4,12 @@ namespace Mantenimientos.Models.ViewModels
 {
     public class ObservacionVM
     {
-        // ── Identificador ──────────────────────────────────────────────────────
         public int ID { get; set; }
 
-        /// <summary>Clave de sucursal — se envía como campo oculto.</summary>
         [Required]
         public string CLV_SUC { get; set; } = string.Empty;
 
-        // ── Datos de solo lectura (vienen del JOIN con Iker.dbo.Sucursales) ───
+        // datos de solo lectura (vienen de l join con Sucursales)
         [Display(Name = "Ruta")]
         public int RUTA { get; set; }
 
@@ -23,7 +21,7 @@ namespace Mantenimientos.Models.ViewModels
 
         public string REGION_NOMBRE { get; set; } = string.Empty;
 
-        // ── Fechas estimadas (editables) ───────────────────────────────────────
+        // fechas estimadas JA
         [Display(Name = "Fecha Inicio Estimada")]
         [DataType(DataType.Date)]
         public DateTime? FECHA_INI_ES { get; set; }
@@ -32,7 +30,7 @@ namespace Mantenimientos.Models.ViewModels
         [DataType(DataType.Date)]
         public DateTime? FECHA_FIN_ES { get; set; }
 
-        // ── Fechas reales (solo lectura — vienen de Iker.dbo.DBICET) ──────────
+        // fechas reales (vienen de DBICET) 
         [Display(Name = "Fecha Inicio Real")]
         [DataType(DataType.Date)]
         public DateTime? FECHA_INI_RE { get; set; }
@@ -41,11 +39,11 @@ namespace Mantenimientos.Models.ViewModels
         [DataType(DataType.Date)]
         public DateTime? FECHA_FIN_RE { get; set; }
 
-        // ── Días de atraso / adelanto (calculado en el servidor) ───────────────
+        // dias de atraso o adelanto (Se calculan en el servidor)
         [Display(Name = "Días Atraso/Adelanto")]
         public int? DIAS_ATRASO { get; set; }
 
-        // ── Observaciones (máx. 200 palabras) ─────────────────────────────────
+        // Observaciones
         [Display(Name = "Observaciones")]
         [DataType(DataType.MultilineText)]
         public string? OBSERVACIONES { get; set; }

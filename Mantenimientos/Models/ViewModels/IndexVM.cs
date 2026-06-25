@@ -4,25 +4,24 @@ namespace Mantenimientos.Models.ViewModels
 {
     public class IndexVM
     {
-        // ── Resultados ─────────────────────────────────────────────────────────
+        // Resultados
         public List<SeguimientoViewModel> Seguimientos { get; set; } = new();
 
-        // ── Filtros ────────────────────────────────────────────────────────────
+        // Filtros
         public int? FiltroRuta { get; set; }
         public int? FiltroRegion { get; set; }
         public int? FiltroMes { get; set; }
         public int? FiltroPeriodo { get; set; }
 
-        // ── Listas para los dropdowns ──────────────────────────────────────────
+        // Listas para los dropdowns
         public List<SelectListItem> RutasDisponibles { get; set; } = new();
         public List<SelectListItem> MesesDisponibles { get; set; } = new();
-        public List<SelectListItem> RegionesDisponibles { get; set; } = new();  // NUEVO
-        public List<SelectListItem> PeriodosDisponibles { get; set; } = new();  // NUEVO
+        public List<SelectListItem> RegionesDisponibles { get; set; } = new();
+        public List<SelectListItem> PeriodosDisponibles { get; set; } = new();
     }
 
-    /// <summary>
-    /// Resultado aplanado de Seguimientos + JOIN Sucursales + JOIN DBICET.
-    /// </summary>
+    // Rsultados de joins
+  
     public class SeguimientoViewModel
     {
         public int ID { get; set; }

@@ -11,6 +11,7 @@
             : fecha.Value.ToString("dd/MM/yyyy");
 }
 
+<!-- Contenido principal-->
 <div class="container-fluid py-4 px-3">
 
     <div class="row align-items-center g-3 mb-4">
@@ -30,6 +31,7 @@
         </div>
     }
 
+    <!-- Filtros de búsqueda -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header py-3 d-flex align-items-center gap-2"
              style="color:#ffffff; background:linear-gradient(135deg,#1D3557 0%,#457B9D 100%);">
@@ -38,7 +40,7 @@
         <div class="card-body bg-light-subtle">
             <form asp-action="Index" method="get" id="formFiltros">
                 <div class="row g-3">
-
+                    <!-- Filtro de Ruta -->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Ruta</label>
                         <select name="filtroRuta" id="filtroRuta" class="form-select border-2">
@@ -57,6 +59,7 @@
                         </select>
                     </div>
 
+                    <!-- Filtro de Región -->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Región</label>
                         <select name="filtroRegion" id="filtroRegion" class="form-select border-2">
@@ -75,6 +78,7 @@
                         </select>
                     </div>
 
+                    <!-- Filtro de Mes -->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Mes</label>
                         <select name="filtroMes" id="filtroMes" class="form-select border-2">
@@ -93,6 +97,7 @@
                         </select>
                     </div>
 
+                    <!-- Filtro de Periodo -->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Periodo</label>
                         <select name="filtroPeriodo" id="filtroPeriodo" class="form-select border-2">
@@ -111,6 +116,7 @@
 
                 </div>
 
+                <!-- Checkbox para ocultar registros sin fecha -->
                 <div class="row mt-3">
                     <div class="col-12">
                         <div class="form-check form-switch ps-5">
@@ -124,6 +130,7 @@
                     </div>
                 </div>
 
+                <!-- Botones de acción (buscar , limpuar y exportar Excel)-->
                 <div class="d-flex gap-2 mt-4 pt-3 border-top flex-wrap align-items-center">
                     <button type="submit" class="btn px-4 fw-semibold shadow-sm"
                             style="background-color:white; border-color:#1D3557; color:#1D3557;">
@@ -147,6 +154,7 @@
         </div>
     </div>
 
+    <!-- Tabla de resultados -->
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
             <span class="fw-bold text-dark m-0"></span>
@@ -188,7 +196,6 @@
                             var sinFechaRe = !item.FECHA_INI_RE.HasValue;
                             var sinFinReal = !item.FECHA_FIN_RE.HasValue;
 
-                            // Se quitó la clase condicional 'table-danger' de la fila
                             <tr>
                                 <td class="ps-3 fw-bold text-primary">@item.RUTA</td>
                                 <td class="fw-semibold text-dark">@item.SUCURSAL</td>
@@ -258,8 +265,8 @@
 
 @section Scripts {
     <script>
-        const urlExportar         = '@Url.Action("Exportar", "Seguimiento")';
-        const urlIndex            = '@Url.Action("Index", "Seguimiento")';
+        const urlExportar = '@Url.Action("Exportar", "Seguimiento")';
+        const urlIndex = '@Url.Action("Index", "Seguimiento")';
 
         // Tooltips
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el =>
@@ -273,17 +280,17 @@
         // Exportar a Excel
         document.getElementById('btnExportar').addEventListener('click', function () {
             const params = new URLSearchParams();
-            const ruta     = document.getElementById('filtroRuta')?.value;
-            const region   = document.getElementById('filtroRegion')?.value;
-            const mes      = document.getElementById('filtroMes')?.value;
-            const periodo  = document.getElementById('filtroPeriodo')?.value;
-            const ocultar  = document.getElementById('ocultarSinFecha')?.checked;
+            const ruta = document.getElementById('filtroRuta')?.value;
+            const region = document.getElementById('filtroRegion')?.value;
+            const mes = document.getElementById('filtroMes')?.value;
+            const periodo = document.getElementById('filtroPeriodo')?.value;
+            const ocultar = document.getElementById('ocultarSinFecha')?.checked;
 
-            if (ruta)     params.append('filtroRuta',      ruta);
-            if (region)   params.append('filtroRegion',    region);
-            if (mes)      params.append('filtroMes',       mes);
-            if (periodo)  params.append('filtroPeriodo',   periodo);
-            if (ocultar)  params.append('ocultarSinFecha', 'true');
+            if (ruta) params.append('filtroRuta', ruta);
+            if (region) params.append('filtroRegion', region);
+            if (mes) params.append('filtroMes', mes);
+            if (periodo) params.append('filtroPeriodo', periodo);
+            if (ocultar) params.append('ocultarSinFecha', 'true');
 
             window.location.href = urlExportar + '?' + params.toString();
         });

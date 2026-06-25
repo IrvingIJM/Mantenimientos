@@ -213,7 +213,6 @@ namespace Mantenimientos.Controllers
                 TempData["Mensaje"] = "Error al guardar. Intente de nuevo.";
                 TempData["TipoAlerta"] = "danger";
             }
-
             return RedirectToAction(nameof(Index));
         }
 
@@ -225,12 +224,12 @@ namespace Mantenimientos.Controllers
             const string sql = @"
                 INSERT INTO mttos.dbo.Seguimientos (CLV_SUC)
                 SELECT suc.CLV_SUC
-                FROM   Iker.dbo.Sucursales AS suc
-                WHERE  suc.ACTIVO = 1
-                  AND  NOT EXISTS (
+                FROM Iker.dbo.Sucursales AS suc
+                WHERE suc.ACTIVO = 1
+                  AND NOT EXISTS (
                       SELECT 1
-                      FROM   mttos.dbo.Seguimientos AS s
-                      WHERE  s.CLV_SUC = suc.CLV_SUC
+                      FROM mttos.dbo.Seguimientos AS s
+                      WHERE s.CLV_SUC = suc.CLV_SUC
                   );";
             try
             {
@@ -329,7 +328,7 @@ namespace Mantenimientos.Controllers
                 $"Fechas_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
-        // AJAX — Carga dinámica de sucursales para el filtro
+        // carga dinamica de sucursales para el filtro
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
         {
@@ -337,7 +336,7 @@ namespace Mantenimientos.Controllers
             return Json(sucursales.Select(s => new { value = s.CLV_SUC, text = s.Nombre }));
         }
 
-        // Helpers privados
+        // Helpers
         private async Task SincronizarDiasAtrasoAsync(int periodo = PeriodoDefault)
         {
             const string sql = @"
@@ -350,20 +349,20 @@ namespace Mantenimientos.Controllers
                             PARTITION BY CLV_SUC
                             ORDER BY F_Inicio DESC
                         ) AS fila
-                    FROM  Iker.dbo.DBICET
+                    FROM Iker.dbo.DBICET
                     WHERE id_periodo = @Periodo
                 )
                 UPDATE destino
                 SET destino.DIAS_ATRASO =
                     CASE
-                        WHEN destino.FECHA_INI_ES IS NULL             THEN NULL
-                        WHEN origen.F_Inicio IS NULL                  THEN NULL
-                        WHEN origen.F_Inicio <= '1900-01-01'          THEN NULL
+                        WHEN destino.FECHA_INI_ES IS NULL THEN NULL
+                        WHEN origen.F_Inicio IS NULL THEN NULL
+                        WHEN origen.F_Inicio <= '1900-01-01' THEN NULL
                         ELSE DATEDIFF(day, destino.FECHA_INI_ES, origen.F_Inicio)
                     END
-                FROM  mttos.dbo.Seguimientos AS destino
+                FROM mttos.dbo.Seguimientos AS destino
                 INNER JOIN UltimosMovimientos AS origen
-                       ON  destino.CLV_SUC = origen.CLV_SUC
+                       ON destino.CLV_SUC = origen.CLV_SUC
                 WHERE origen.fila = 1;";
             try
             {
