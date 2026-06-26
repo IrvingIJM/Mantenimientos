@@ -9,14 +9,12 @@ namespace Mantenimientos.Models.ViewModels
 
         // Filtros
         public int? FiltroRuta { get; set; }
-        public int? FiltroRegion { get; set; }
         public int? FiltroMes { get; set; }
         public int? FiltroPeriodo { get; set; }
 
         // Listas para los dropdowns
         public List<SelectListItem> RutasDisponibles { get; set; } = new();
         public List<SelectListItem> MesesDisponibles { get; set; } = new();
-        public List<SelectListItem> RegionesDisponibles { get; set; } = new();
         public List<SelectListItem> PeriodosDisponibles { get; set; } = new();
     }
 
@@ -34,7 +32,6 @@ namespace Mantenimientos.Models.ViewModels
         public DateTime? FECHA_FIN_ES { get; set; }
         public DateTime? FECHA_INI_RE { get; set; }
         public DateTime? FECHA_FIN_RE { get; set; }
-        public int? DIAS_ATRASO { get; set; }
         public string? OBSERVACIONES { get; set; }
     }
 }

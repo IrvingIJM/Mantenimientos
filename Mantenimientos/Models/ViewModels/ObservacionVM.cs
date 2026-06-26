@@ -21,7 +21,7 @@ namespace Mantenimientos.Models.ViewModels
 
         public string REGION_NOMBRE { get; set; } = string.Empty;
 
-        // fechas estimadas JA
+        // fechas estimadas 
         [Display(Name = "Fecha Inicio Estimada")]
         [DataType(DataType.Date)]
         public DateTime? FECHA_INI_ES { get; set; }
@@ -38,10 +38,6 @@ namespace Mantenimientos.Models.ViewModels
         [Display(Name = "Fecha Fin Real")]
         [DataType(DataType.Date)]
         public DateTime? FECHA_FIN_RE { get; set; }
-
-        // dias de atraso o adelanto (Se calculan en el servidor)
-        [Display(Name = "Días Atraso/Adelanto")]
-        public int? DIAS_ATRASO { get; set; }
 
         // Observaciones
         [Display(Name = "Observaciones")]

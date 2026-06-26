@@ -6,7 +6,6 @@ using Mantenimientos.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 
 namespace Mantenimientos.Controllers
 {
@@ -14,105 +13,92 @@ namespace Mantenimientos.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly EmpDataService _empDataService;
+        private readonly PeriodoService _periodoService;
         private readonly ILogger<SeguimientoController> _logger;
-
-        private const int PeriodoDefault = 7;
 
         public SeguimientoController(
             ApplicationDbContext context,
             EmpDataService empDataService,
+            PeriodoService periodoService,
             ILogger<SeguimientoController> logger)
         {
             _context = context;
             _empDataService = empDataService;
+            _periodoService = periodoService;
             _logger = logger;
         }
-
         // GET  /Seguimiento/Index
         public async Task<IActionResult> Index(
             int? filtroRuta,
-            int? filtroRegion,
             int? filtroMes,
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
         {
-            int periodo = filtroPeriodo ?? PeriodoDefault;
+            // 2. Obtenemos el periodo actual desde tu SP
+            int periodoActualSP = await _periodoService.ObtenerPeriodoActualAsync();
 
-            await SincronizarDiasAtrasoAsync(periodo);
+            // 3. Calculamos el periodo anterior (asumiendo que si es 1, no baja a 0, o ajusta tu lógica si los periodos se reinician por año)
+            int periodoAnteriorSP = periodoActualSP > 1 ? periodoActualSP - 1 : 1;
 
-            var datos = (await _empDataService.ObtenerSeguimientosAsync(
-                filtroRuta, filtroRegion, filtroMes, ocultarSinFecha, periodo
-            )).Select(dto => new SeguimientoViewModel
-            {
-                ID = dto.ID,
-                CLV_SUC = dto.CLV_SUC,
-                SUCURSAL = dto.SUCURSAL,
-                RUTA = dto.RUTA,
-                REGION = dto.REGION,
-                FECHA_INI_ES = dto.FECHA_INI_ES,
-                FECHA_FIN_ES = dto.FECHA_FIN_ES,
-                FECHA_INI_RE = dto.FECHA_INI_RE,
-                FECHA_FIN_RE = dto.FECHA_FIN_RE,
-                DIAS_ATRASO = dto.DIAS_ATRASO,
-                OBSERVACIONES = dto.OBSERVACIONES
-            }).ToList();
+            // Si el usuario no mandó filtro, usamos el actual por defecto
+            int periodoSeleccionado = filtroPeriodo ?? periodoActualSP;
+
+            var datos = await _empDataService.ObtenerSeguimientosAsync(
+                filtroRuta, filtroRegion, filtroMes, ocultarSinFecha, periodoSeleccionado);
 
             var listaRutas = await _empDataService.ObtenerRutasAsync();
             var listaRegiones = await _empDataService.ObtenerRegionesAsync();
-            var listaPeriodos = await _empDataService.ObtenerPeriodosAsync();
+
+            // 4. CREAMOS LA LISTA SOLO CON LOS DOS PERIODOS
+            var listaPeriodos = new List<int> { periodoActualSP, periodoAnteriorSP }.Distinct().ToList();
+
+            var meses = Enumerable.Range(1, 12)
+                .Select(m => new SelectListItem
+                {
+                    Value = m.ToString(),
+                    Text = new DateTime(2000, m, 1).ToString("MMMM"),
+                    Selected = filtroMes.HasValue && filtroMes.Value == m
+                }).ToList();
 
             var viewModel = new IndexVM
             {
-                Seguimientos = datos,
+                Seguimientos = datos.Select(d => new SeguimientoViewModel
+                {
+                    ID = d.ID,
+                    CLV_SUC = d.CLV_SUC,
+                    SUCURSAL = d.SUCURSAL,
+                    RUTA = d.RUTA,
+                    REGION = d.REGION,
+                    FECHA_INI_ES = d.FECHA_INI_ES,
+                    FECHA_FIN_ES = d.FECHA_FIN_ES,
+                    FECHA_INI_RE = d.FECHA_INI_RE,
+                    FECHA_FIN_RE = d.FECHA_FIN_RE,
+                    OBSERVACIONES = d.OBSERVACIONES
+                }).ToList(),
 
                 FiltroRuta = filtroRuta,
-                FiltroRegion = filtroRegion,
                 FiltroMes = filtroMes,
-                FiltroPeriodo = periodo,
+                FiltroPeriodo = periodoSeleccionado,
 
                 RutasDisponibles = listaRutas.Select(r => new SelectListItem
                 {
                     Value = r.ToString(),
-                    Text = r.ToString(),
+                    Text = "Ruta " + r.ToString(),
                     Selected = (r == filtroRuta)
                 }).ToList(),
 
-                RegionesDisponibles = listaRegiones.Select(r => new SelectListItem
-                {
-                    Value = r.ToString(),
-                    Text = r switch
-                    {
-                        11 => "Central",
-                        12 => "México",
-                        13 => "Norte",
-                        14 => "Sureste",
-                        _ => "Región" + r.ToString()
-                    },
-                    Selected = (r == filtroRegion)
-                }).ToList(),
-
+                // 5. Mapeamos nuestra lista de 2 elementos al SelectListItem
                 PeriodosDisponibles = listaPeriodos.Select(p => new SelectListItem
                 {
                     Value = p.ToString(),
-                    Text = "Periodo " + p.ToString(),
-                    Selected = (p == periodo)
+                    Text = (p == periodoActualSP) ? $"Periodo {p} (Actual)" : $"Periodo {p} (Anterior)",
+                    Selected = (p == periodoSeleccionado)
                 }).ToList(),
 
-                MesesDisponibles = Enumerable.Range(1, 12).Select(m => new SelectListItem
-                {
-                    Value = m.ToString(),
-                    Text = CultureInfo.GetCultureInfo("re-RE").DateTimeFormat.GetMonthName(m),
-                    Selected = (m == filtroMes)
-                }).ToList()
+                MesesDisponibles = meses
             };
 
             ViewBag.OcultarSinFecha = ocultarSinFecha;
-
-            ViewBag.FiltroRuta = filtroRuta;
-            ViewBag.FiltroRegion = filtroRegion;
-            ViewBag.FiltroMes = filtroMes;
-            ViewBag.FiltroPeriodo = periodo;
-
             return View(viewModel);
         }
 
@@ -128,9 +114,7 @@ namespace Mantenimientos.Controllers
                 return NotFound();
 
             var sucInfo = await _empDataService.ObtenerInfoSucursalAsync(seguimiento.CLV_SUC);
-
-            var fechasReales = await _empDataService.ObtenerFechasRealesAsync(
-                seguimiento.CLV_SUC, PeriodoDefault);
+            var fechasReales = await _empDataService.ObtenerFechasRealesAsync(seguimiento.CLV_SUC, PeriodoDef);
 
             var vm = new ObservacionVM
             {
@@ -151,7 +135,6 @@ namespace Mantenimientos.Controllers
                 FECHA_FIN_ES = seguimiento.FECHA_FIN_ES,
                 FECHA_INI_RE = fechasReales?.FechaInicio,
                 FECHA_FIN_RE = fechasReales?.FechaFin,
-                DIAS_ATRASO = seguimiento.DIAS_ATRASO,
                 OBSERVACIONES = seguimiento.OBSERVACIONES
             };
 
@@ -168,12 +151,11 @@ namespace Mantenimientos.Controllers
             ModelState.Remove(nameof(ObservacionVM.REGION));
             ModelState.Remove(nameof(ObservacionVM.FECHA_INI_RE));
             ModelState.Remove(nameof(ObservacionVM.FECHA_FIN_RE));
-            ModelState.Remove(nameof(ObservacionVM.DIAS_ATRASO));
 
             if (!ModelState.IsValid)
             {
                 var sucInfo = await _empDataService.ObtenerInfoSucursalAsync(model.CLV_SUC);
-                var fechasReales = await _empDataService.ObtenerFechasRealesAsync(model.CLV_SUC, PeriodoDefault);
+                var fechasReales = await _empDataService.ObtenerFechasRealesAsync(model.CLV_SUC, PeriodoDef);
                 model.SUCURSAL = sucInfo?.Nombre ?? model.CLV_SUC;
                 model.RUTA = sucInfo?.RUTA ?? 0;
                 model.REGION = sucInfo?.REGION ?? 0;
@@ -187,18 +169,8 @@ namespace Mantenimientos.Controllers
                 var existente = await _context.Seguimientos.FindAsync(model.ID);
                 if (existente is null) return NotFound();
 
-                var fechasReales = await _empDataService.ObtenerFechasRealesAsync(
-                    existente.CLV_SUC, PeriodoDefault);
-
-                int diasAtraso = 0;
-                if (fechasReales?.FechaInicio != null && model.FECHA_INI_ES.HasValue)
-                {
-                    diasAtraso = (int)(fechasReales.FechaInicio.Value - model.FECHA_INI_ES.Value).TotalDays;
-                }
-
                 existente.FECHA_INI_ES = model.FECHA_INI_ES;
                 existente.FECHA_FIN_ES = model.FECHA_FIN_ES;
-                existente.DIAS_ATRASO = diasAtraso;
                 existente.OBSERVACIONES = model.OBSERVACIONES;
 
                 _context.Seguimientos.Update(existente);
@@ -213,6 +185,7 @@ namespace Mantenimientos.Controllers
                 TempData["Mensaje"] = "Error al guardar. Intente de nuevo.";
                 TempData["TipoAlerta"] = "danger";
             }
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -224,12 +197,12 @@ namespace Mantenimientos.Controllers
             const string sql = @"
                 INSERT INTO mttos.dbo.Seguimientos (CLV_SUC)
                 SELECT suc.CLV_SUC
-                FROM Iker.dbo.Sucursales AS suc
-                WHERE suc.ACTIVO = 1
-                  AND NOT EXISTS (
+                FROM   Iker.dbo.Sucursales AS suc
+                WHERE  suc.ACTIVO = 1
+                  AND  NOT EXISTS (
                       SELECT 1
-                      FROM mttos.dbo.Seguimientos AS s
-                      WHERE s.CLV_SUC = suc.CLV_SUC
+                      FROM   mttos.dbo.Seguimientos AS s
+                      WHERE  s.CLV_SUC = suc.CLV_SUC
                   );";
             try
             {
@@ -255,19 +228,23 @@ namespace Mantenimientos.Controllers
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
         {
-            int periodo = filtroPeriodo ?? PeriodoDefault;
-
-            await SincronizarDiasAtrasoAsync(periodo);
+            int periodo = filtroPeriodo ?? PeriodoDef;
 
             var datos = await _empDataService.ObtenerSeguimientosAsync(
-                filtroRuta, filtroRegion,
-                filtroMes, ocultarSinFecha, periodo);
+                filtroRuta, filtroRegion, filtroMes, ocultarSinFecha, periodo);
 
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
 
             hoja.Style.Font.FontName = "Arial";
             hoja.Style.Font.FontSize = 10;
+
+            // Encabezados
+            hoja.Cell("A3").Value = "Ruta";
+            hoja.Range("A3:A4").Merge();
+
+            hoja.Cell("B3").Value = "Región";
+            hoja.Range("B3:B4").Merge();
 
             hoja.Cell("C3").Value = "Centro de Ventas";
             hoja.Range("C3:C4").Merge();
@@ -278,18 +255,15 @@ namespace Mantenimientos.Controllers
             hoja.Cell("F3").Value = "Fecha Real";
             hoja.Range("F3:G3").Merge();
 
-            hoja.Cell("H3").Value = "Días Desfasados";
+            hoja.Cell("H3").Value = "Observaciones";
             hoja.Range("H3:H4").Merge();
-
-            hoja.Cell("I3").Value = "Observaciones";
-            hoja.Range("I3:I4").Merge();
 
             hoja.Cell("D4").Value = "Inicio";
             hoja.Cell("E4").Value = "Fin";
             hoja.Cell("F4").Value = "Inicio";
             hoja.Cell("G4").Value = "Fin";
 
-            var rango = hoja.Range("C3:I4");
+            var rango = hoja.Range("A3:H4");
             rango.Style
                  .Font.SetBold(true)
                  .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
@@ -297,82 +271,44 @@ namespace Mantenimientos.Controllers
             rango.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
             rango.Cells().Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
 
-            // Datos
+            // Datos 
             int fila = 5;
             foreach (var d in datos)
             {
+                hoja.Cell(fila, "A").Value = d.RUTA;
+                hoja.Cell(fila, "B").Value = d.REGION;
                 hoja.Cell(fila, "C").Value = d.SUCURSAL;
                 hoja.Cell(fila, "D").Value = FormatFechaExcel(d.FECHA_INI_ES);
                 hoja.Cell(fila, "E").Value = FormatFechaExcel(d.FECHA_FIN_ES);
                 hoja.Cell(fila, "F").Value = FormatFechaExcel(d.FECHA_INI_RE);
                 hoja.Cell(fila, "G").Value = FormatFechaExcel(d.FECHA_FIN_RE);
-                hoja.Cell(fila, "H").Value = d.DIAS_ATRASO;
-                hoja.Cell(fila, "I").Value = d.OBSERVACIONES ?? string.Empty;
+                hoja.Cell(fila, "H").Value = d.OBSERVACIONES ?? string.Empty;
 
-                hoja.Range(fila, 3, fila, 9).Style
+                hoja.Range(fila, 1, fila, 8).Style
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetInsideBorder(XLBorderStyleValues.Thin);
-                hoja.Range(fila, 4, fila, 8).Style
+                hoja.Range(fila, 4, fila, 7).Style
                     .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
 
                 fila++;
             }
 
-            hoja.Columns("C:I").AdjustToContents();
+            hoja.Columns("A:H").AdjustToContents();
 
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
             return File(
                 ms.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Fechas_{DateTime.Now:yyyyMMdd}.xlsx");
+                $"Mantenimientos_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
         }
 
-        // carga dinamica de sucursales para el filtro
+        // Carga dinamica de sucursales para el filtro del Index
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
         {
             var sucursales = await _empDataService.ObtenerSucursalesPorRutaAsync(ruta);
             return Json(sucursales.Select(s => new { value = s.CLV_SUC, text = s.Nombre }));
-        }
-
-        // Helpers
-        private async Task SincronizarDiasAtrasoAsync(int periodo = PeriodoDefault)
-        {
-            const string sql = @"
-                WITH UltimosMovimientos AS (
-                    SELECT
-                        CLV_SUC,
-                        F_Inicio,
-                        F_Termino,
-                        ROW_NUMBER() OVER (
-                            PARTITION BY CLV_SUC
-                            ORDER BY F_Inicio DESC
-                        ) AS fila
-                    FROM Iker.dbo.DBICET
-                    WHERE id_periodo = @Periodo
-                )
-                UPDATE destino
-                SET destino.DIAS_ATRASO =
-                    CASE
-                        WHEN destino.FECHA_INI_ES IS NULL THEN NULL
-                        WHEN origen.F_Inicio IS NULL THEN NULL
-                        WHEN origen.F_Inicio <= '1900-01-01' THEN NULL
-                        ELSE DATEDIFF(day, destino.FECHA_INI_ES, origen.F_Inicio)
-                    END
-                FROM mttos.dbo.Seguimientos AS destino
-                INNER JOIN UltimosMovimientos AS origen
-                       ON destino.CLV_SUC = origen.CLV_SUC
-                WHERE origen.fila = 1;";
-            try
-            {
-                await _context.Database.ExecuteSqlRawAsync(sql,
-                    new Microsoft.Data.SqlClient.SqlParameter("@Periodo", periodo));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al sincronizar DIAS_ATRASO (periodo {P}).", periodo);
-            }
         }
 
         private static string FormatFechaExcel(DateTime? fecha) =>

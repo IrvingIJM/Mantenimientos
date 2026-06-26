@@ -27,11 +27,9 @@ namespace Mantenimientos.Services
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
                 const string sql = @"
-                    SELECT DISTINCT suc.RUTA
-                    FROM Iker.dbo.Sucursales suc
+                    SELECT DISTINCT suc.RUTA FROM Iker.dbo.Sucursales suc
                     INNER JOIN mttos.dbo.Seguimientos s ON s.CLV_SUC = suc.CLV_SUC
-                    WHERE suc.ACTIVO = 1
-                      AND suc.RUTA IS NOT NULL
+                    WHERE suc.ACTIVO = 1 AND suc.RUTA IS NOT NULL
                     ORDER BY suc.RUTA";
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
@@ -42,7 +40,7 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // regiones que tienen al menos un Seguimiento activo
+        // Regiones que tienen al menos un Seguimiento activo
         public async Task<List<int>> ObtenerRegionesAsync()
         {
             var lista = new List<int>();
@@ -52,12 +50,10 @@ namespace Mantenimientos.Services
                 await conn.OpenAsync();
 
                 const string sql = @"
-                    SELECT DISTINCT suc.ID_REG
-                    FROM Iker.dbo.Sucursales   suc
-                    INNER JOIN mttos.dbo.Seguimientos s ON s.CLV_SUC = suc.CLV_SUC
-                    WHERE suc.ACTIVO = 1
-                      AND suc.ID_REG IS NOT NULL
-                    ORDER BY suc.ID_REG";
+                    SELECT DISTINCT id_periodo 
+                    FROM Iker.dbo.DBICET 
+                    WHERE id_periodo IS NOT NULL 
+                    ORDER BY id_periodo DESC";
 
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
@@ -66,18 +62,18 @@ namespace Mantenimientos.Services
                 {
                     if (!reader.IsDBNull(0))
                     {
-                        lista.Add(Convert.ToInt32(reader.GetByte(0)));
+                        lista.Add(reader.GetInt32(0));
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener regiones.");
+                _logger.LogError(ex, "Error al obtener periodos.");
             }
             return lista;
         }
 
-        // periodos disponibles en DBICET, ordenados por el mas reciente prmero
+        // Periodos disponibles en DBICET, ordenados descendente
         public async Task<List<int>> ObtenerPeriodosAsync()
         {
             var lista = new List<int>();
@@ -91,25 +87,16 @@ namespace Mantenimientos.Services
                     FROM Iker.dbo.DBICET
                     WHERE id_periodo IS NOT NULL
                     ORDER BY id_periodo DESC";
-
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
-                {
-                    if (!reader.IsDBNull(0))
-                    {
-                        lista.Add(reader.GetByte(0));
-                    }
-                }
+                    lista.Add(reader.GetInt32(0));
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener periodos.");
-            }
+            catch (Exception ex) { _logger.LogError(ex, "Error al obtener periodos."); }
             return lista;
         }
 
-        // Sucursales activas de una ruta para el filtro dinamico del Index
+        // Sucursales activas de una ruta para el filtro dinámico del Index
         public async Task<List<SucursalDto>> ObtenerSucursalesPorRutaAsync(int ruta)
         {
             var lista = new List<SucursalDto>();
@@ -121,8 +108,7 @@ namespace Mantenimientos.Services
                     SELECT suc.CLV_SUC, suc.Sucursal, suc.RUTA, suc.ID_REG
                     FROM Iker.dbo.Sucursales suc
                     INNER JOIN mttos.dbo.Seguimientos s ON s.CLV_SUC = suc.CLV_SUC
-                    WHERE suc.ACTIVO = 1
-                      AND suc.RUTA = @Ruta
+                    WHERE suc.ACTIVO = 1 AND suc.RUTA = @Ruta
                     ORDER BY suc.Sucursal";
                 await using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@Ruta", ruta);
@@ -161,8 +147,8 @@ namespace Mantenimientos.Services
             return null;
         }
 
-        // Fechas reales del periodo 7 (el mas reciente).
-        public async Task<FechasRealesDto?> ObtenerFechasRealesAsync(string clvSuc, int periodo = 7)
+        // Fechas reales del periodo
+        public async Task<FechasRealesDto?> ObtenerFechasRealesAsync(string clvSuc, int periodo)
         {
             try
             {
@@ -200,11 +186,11 @@ namespace Mantenimientos.Services
 
         // consulta principal con joins
         public async Task<List<SeguimientoJoinDto>> ObtenerSeguimientosAsync(
+            int periodo,
             int? filtroRuta = null,
             int? filtroRegion = null,
             int? filtroMes = null,
-            bool ocultarSinFecha = false,
-            int periodo = 7)
+            bool ocultarSinFecha = false)
         {
             var lista = new List<SeguimientoJoinDto>();
             try
@@ -223,9 +209,8 @@ namespace Mantenimientos.Services
                         s.FECHA_FIN_ES,
                         dbr.F_Inicio AS FECHA_INI_RE,
                         dbr.F_Termino AS FECHA_FIN_RE,
-                        s.DIAS_ATRASO,
                         s.OBSERVACIONES
-                    FROM mttos.dbo.Seguimientos s
+                    FROM mttos.dbo.Seguimientos   s
                     INNER JOIN Iker.dbo.Sucursales suc
                            ON s.CLV_SUC = suc.CLV_SUC
                     LEFT JOIN (
@@ -283,7 +268,6 @@ namespace Mantenimientos.Services
                         FECHA_FIN_ES = reader["FECHA_FIN_ES"] as DateTime?,
                         FECHA_INI_RE = (fi.HasValue && fi.Value > FechaDefault) ? fi : null,
                         FECHA_FIN_RE = (ft.HasValue && ft.Value > FechaDefault) ? ft : null,
-                        DIAS_ATRASO = reader["DIAS_ATRASO"] as int?,
                         OBSERVACIONES = reader["OBSERVACIONES"] as string
                     });
                 }
@@ -296,7 +280,6 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // Helpers privados 
         private static SucursalDto LeerSucursalDto(SqlDataReader r) => new()
         {
             CLV_SUC = r["CLV_SUC"].ToString()!,
@@ -304,9 +287,13 @@ namespace Mantenimientos.Services
             RUTA = r.GetByte(r.GetOrdinal("RUTA")),
             REGION = r.GetByte(r.GetOrdinal("ID_REG"))
         };
+
+        internal async Task<IEnumerable<object>> ObtenerSeguimientosAsync(int? filtroRuta, int? filtroMes, bool ocultarSinFecha, int periodoSeleccionado)
+        {
+            throw new NotImplementedException();
+        }
     }
 
-    // DTOs
     public class SucursalDto
     {
         public string CLV_SUC { get; set; } = string.Empty;
@@ -332,7 +319,6 @@ namespace Mantenimientos.Services
         public DateTime? FECHA_FIN_ES { get; set; }
         public DateTime? FECHA_INI_RE { get; set; }
         public DateTime? FECHA_FIN_RE { get; set; }
-        public int? DIAS_ATRASO { get; set; }
         public string? OBSERVACIONES { get; set; }
     }
 }
