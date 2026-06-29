@@ -29,28 +29,24 @@ namespace Mantenimientos.Controllers
             _logger = logger;
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // GET  /Seguimiento/Index
-        // ══════════════════════════════════════════════════════════════════════
         public async Task<IActionResult> Index(
             int? filtroRuta,
             int? filtroMes,
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
         {
-            // ── Determinar periodo ────────────────────────────────────────────
             // Si el usuario no eligió periodo, se usa el actual.
             int periodoActual = await _periodoService.ObtenerPeriodoActualAsync();
             int periodoActivo = filtroPeriodo ?? periodoActual;
 
-            // ── Datos con JOINs ───────────────────────────────────────────────
             var datos = await _empDataService.ObtenerSeguimientosAsync(
                 periodo: periodoActivo,
                 filtroRuta: filtroRuta,
                 filtroMes: filtroMes,
                 ocultarSinFecha: ocultarSinFecha);
 
-            // ── Catálogos para filtros ────────────────────────────────────────
+            // datos para filtros 
             var listaRutas = await _empDataService.ObtenerRutasAsync();
             var listaPeriodos = await _periodoService.ObtenerPeriodosDisponiblesAsync();
 
@@ -62,7 +58,6 @@ namespace Mantenimientos.Controllers
                     Selected = filtroMes.HasValue && filtroMes.Value == m
                 }).ToList();
 
-            // ── Mapeo a nombre de región ──────────────────────────────────────
             static string NombreRegion(int id) => id switch
             {
                 11 => "Central",
@@ -98,11 +93,11 @@ namespace Mantenimientos.Controllers
                 RutasDisponibles = listaRutas.Select(r => new SelectListItem
                 {
                     Value = r.ToString(),
-                    Text = "Ruta " + r,
+                    Text = r.ToString(),
                     Selected = r == filtroRuta
                 }).ToList(),
 
-                // Solo dos opciones: actual y anterior (PeriodoService garantiza esto)
+                // Solo periodo actual y anterior
                 PeriodosDisponibles = listaPeriodos.Select(p => new SelectListItem
                 {
                     Value = p.Id.ToString(),
@@ -117,9 +112,7 @@ namespace Mantenimientos.Controllers
             return View(viewModel);
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // GET  /Seguimiento/Observacion/{id}
-        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> Observacion(int? id)
         {
@@ -130,10 +123,9 @@ namespace Mantenimientos.Controllers
             if (seguimiento == null)
                 return NotFound();
 
-            // Datos del JOIN con Sucursales
             var sucInfo = await _empDataService.ObtenerInfoSucursalAsync(seguimiento.CLV_SUC);
 
-            // Fechas reales usando el ID_PERIODO del propio registro — no un hardcode
+            // Fechas reales
             var fechasReales = await _empDataService.ObtenerFechasRealesAsync(
                 seguimiento.CLV_SUC,
                 seguimiento.ID_PERIODO);
@@ -164,11 +156,7 @@ namespace Mantenimientos.Controllers
             return View(vm);
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // POST /Seguimiento/Observacion
-        // Solo se actualiza: FECHA_INI_ES, FECHA_FIN_ES, OBSERVACIONES.
-        // ID_PERIODO nunca cambia — fue asignado al importar.
-        // ══════════════════════════════════════════════════════════════════════
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Observacion(ObservacionVM model)
@@ -201,7 +189,7 @@ namespace Mantenimientos.Controllers
                 var existente = await _context.Seguimientos.FindAsync(model.ID);
                 if (existente is null) return NotFound();
 
-                // ID_PERIODO NO se modifica — ya fue fijado al importar
+                // ID_PERIODO NO se modifica
                 existente.FECHA_INI_ES = model.FECHA_INI_ES;
                 existente.FECHA_FIN_ES = model.FECHA_FIN_ES;
                 existente.OBSERVACIONES = model.OBSERVACIONES;
@@ -219,17 +207,12 @@ namespace Mantenimientos.Controllers
                 TempData["TipoAlerta"] = "danger";
             }
 
-            // Regresar al Index mostrando el periodo del registro que se editó
+            // Regresar al Index mostrando el periodo del registro que se edito
             return RedirectToAction(nameof(Index),
                 new { filtroPeriodo = model.ID_PERIODO });
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // POST /Seguimiento/Importar
-        // Inserta en Seguimientos las sucursales activas de Iker que todavía
-        // NO tienen registro para el PERIODO ACTUAL.
-        // Clave de deduplicación: CLV_SUC + ID_PERIODO.
-        // ══════════════════════════════════════════════════════════════════════
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Importar()
@@ -241,13 +224,13 @@ namespace Mantenimientos.Controllers
                 const string sql = @"
                     INSERT INTO mttos.dbo.Seguimientos (CLV_SUC, ID_PERIODO)
                     SELECT suc.CLV_SUC, @PeriodoActual
-                    FROM   Iker.dbo.Sucursales AS suc
-                    WHERE  suc.ACTIVO = 1
-                      AND  NOT EXISTS (
+                    FROM Iker.dbo.Sucursales AS suc
+                    WHERE suc.ACTIVO = 1
+                      AND NOT EXISTS (
                               SELECT 1
-                              FROM   mttos.dbo.Seguimientos AS s
-                              WHERE  s.CLV_SUC    = suc.CLV_SUC
-                                AND  s.ID_PERIODO = @PeriodoActual
+                              FROM mttos.dbo.Seguimientos AS s
+                              WHERE s.CLV_SUC    = suc.CLV_SUC
+                                AND s.ID_PERIODO = @PeriodoActual
                            );";
 
                 int insertados = await _context.Database.ExecuteSqlRawAsync(
@@ -266,9 +249,7 @@ namespace Mantenimientos.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // GET  /Seguimiento/Exportar
-        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> Exportar(
             int? filtroRuta,
@@ -291,13 +272,7 @@ namespace Mantenimientos.Controllers
             hoja.Style.Font.FontName = "Arial";
             hoja.Style.Font.FontSize = 10;
 
-            // Título con el periodo exportado
-            hoja.Cell("A1").Value = $"Seguimiento de Mantenimientos — Periodo {periodo}";
-            hoja.Range("A1:H1").Merge().Style
-                .Font.SetBold(true)
-                .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
-
-            // ── Encabezados ───────────────────────────────────────────────────
+            // Encabezados
             hoja.Cell("A3").Value = "Ruta"; hoja.Range("A3:A4").Merge();
             hoja.Cell("B3").Value = "Región"; hoja.Range("B3:B4").Merge();
             hoja.Cell("C3").Value = "Sucursal"; hoja.Range("C3:C4").Merge();
@@ -320,7 +295,7 @@ namespace Mantenimientos.Controllers
             rango.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
             rango.Cells().Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
 
-            // ── Datos ─────────────────────────────────────────────────────────
+            // Datos
             int fila = 5;
             foreach (var d in datos)
             {
@@ -351,9 +326,7 @@ namespace Mantenimientos.Controllers
                 $"Mantenimientos_P{periodo}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // AJAX  GET /Seguimiento/ObtenerSucursalesFiltro?ruta=X
-        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
         {
@@ -361,7 +334,7 @@ namespace Mantenimientos.Controllers
             return Json(suc.Select(s => new { value = s.CLV_SUC, text = s.Nombre }));
         }
 
-        // ── Helper ────────────────────────────────────────────────────────────
+        // Helper
         private static string FormatFechaExcel(DateTime? f) =>
             f.HasValue ? f.Value.ToString("dd/MM/yyyy") : string.Empty;
     }

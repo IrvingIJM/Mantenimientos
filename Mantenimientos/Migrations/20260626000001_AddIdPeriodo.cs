@@ -11,9 +11,9 @@ namespace Mantenimientos.Migrations
             migrationBuilder.Sql(@"
                 IF NOT EXISTS (
                     SELECT 1
-                    FROM   sys.columns
-                    WHERE  object_id = OBJECT_ID(N'dbo.Seguimientos')
-                      AND  name      = N'ID_PERIODO'
+                    FROM sys.columns
+                    WHERE object_id = OBJECT_ID(N'dbo.Seguimientos')
+                      AND name = N'ID_PERIODO'
                 )
                 BEGIN
                     ALTER TABLE dbo.Seguimientos
@@ -25,9 +25,9 @@ namespace Mantenimientos.Migrations
             migrationBuilder.Sql(@"
                 IF EXISTS (
                     SELECT 1
-                    FROM   sys.indexes
-                    WHERE  object_id = OBJECT_ID(N'dbo.Seguimientos')
-                      AND  name      = N'IX_Seguimiento_ClvSuc'
+                    FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.Seguimientos')
+                      AND name = N'IX_Seguimiento_ClvSuc'
                 )
                 BEGIN
                     DROP INDEX IX_Seguimiento_ClvSuc ON dbo.Seguimientos;
@@ -37,9 +37,9 @@ namespace Mantenimientos.Migrations
             migrationBuilder.Sql(@"
                 IF NOT EXISTS (
                     SELECT 1
-                    FROM   sys.indexes
-                    WHERE  object_id = OBJECT_ID(N'dbo.Seguimientos')
-                      AND  name      = N'IX_Seguimiento_ClvSuc_Periodo'
+                    FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.Seguimientos')
+                      AND name = N'IX_Seguimiento_ClvSuc_Periodo'
                 )
                 BEGIN
                     CREATE UNIQUE INDEX IX_Seguimiento_ClvSuc_Periodo
@@ -53,9 +53,9 @@ namespace Mantenimientos.Migrations
             migrationBuilder.Sql(@"
                 IF EXISTS (
                     SELECT 1
-                    FROM   sys.indexes
-                    WHERE  object_id = OBJECT_ID(N'dbo.Seguimientos')
-                      AND  name      = N'IX_Seguimiento_ClvSuc_Periodo'
+                    FROM sys.indexes
+                    WHERE object_id = OBJECT_ID(N'dbo.Seguimientos')
+                      AND name = N'IX_Seguimiento_ClvSuc_Periodo'
                 )
                     DROP INDEX IX_Seguimiento_ClvSuc_Periodo ON dbo.Seguimientos;
             ");
@@ -63,9 +63,9 @@ namespace Mantenimientos.Migrations
             migrationBuilder.Sql(@"
                 IF EXISTS (
                     SELECT 1
-                    FROM   sys.columns
-                    WHERE  object_id = OBJECT_ID(N'dbo.Seguimientos')
-                      AND  name      = N'ID_PERIODO'
+                    FROM sys.columns
+                    WHERE object_id = OBJECT_ID(N'dbo.Seguimientos')
+                      AND name = N'ID_PERIODO'
                 )
                 BEGIN
                     ALTER TABLE dbo.Seguimientos
