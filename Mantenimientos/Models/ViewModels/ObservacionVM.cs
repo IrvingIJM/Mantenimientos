@@ -4,12 +4,19 @@ namespace Mantenimientos.Models.ViewModels
 {
     public class ObservacionVM
     {
+        // ── Identificadores ───────────────────────────────────────────────────
         public int ID { get; set; }
 
         [Required]
         public string CLV_SUC { get; set; } = string.Empty;
 
-        // datos de solo lectura (vienen de l join con Sucursales)
+        /// <summary>
+        /// Periodo de este registro. Se muestra como etiqueta (no editable)
+        /// y se conserva en un campo oculto para que el POST lo reciba.
+        /// </summary>
+        public int ID_PERIODO { get; set; }
+
+        // ── Datos de solo lectura (JOIN con Iker.dbo.Sucursales) ─────────────
         [Display(Name = "Ruta")]
         public int RUTA { get; set; }
 
@@ -21,7 +28,7 @@ namespace Mantenimientos.Models.ViewModels
 
         public string REGION_NOMBRE { get; set; } = string.Empty;
 
-        // fechas estimadas 
+        // ── Fechas estimadas (editables) ──────────────────────────────────────
         [Display(Name = "Fecha Inicio Estimada")]
         [DataType(DataType.Date)]
         public DateTime? FECHA_INI_ES { get; set; }
@@ -30,7 +37,7 @@ namespace Mantenimientos.Models.ViewModels
         [DataType(DataType.Date)]
         public DateTime? FECHA_FIN_ES { get; set; }
 
-        // fechas reales (vienen de DBICET) 
+        // ── Fechas reales (solo lectura — Iker.dbo.DBICET del ID_PERIODO) ─────
         [Display(Name = "Fecha Inicio Real")]
         [DataType(DataType.Date)]
         public DateTime? FECHA_INI_RE { get; set; }
@@ -39,7 +46,7 @@ namespace Mantenimientos.Models.ViewModels
         [DataType(DataType.Date)]
         public DateTime? FECHA_FIN_RE { get; set; }
 
-        // Observaciones
+        // ── Observaciones ─────────────────────────────────────────────────────
         [Display(Name = "Observaciones")]
         [DataType(DataType.MultilineText)]
         public string? OBSERVACIONES { get; set; }

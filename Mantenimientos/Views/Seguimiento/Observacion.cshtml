@@ -13,190 +13,166 @@
             ? fecha.Value.ToString("dd/MM/yyyy")
             : "—";
 }
+
 <div class="container py-4" style="max-width:860px;">
 
+    <!-- ── Encabezado ───────────────────────────────────────────────────── -->
     <div class="d-flex align-items-center mb-4 gap-3">
-        <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-circle p-2">
+        <a asp-action="Index" asp-route-filtroPeriodo="@Model.ID_PERIODO"
+           class="btn btn-outline-secondary btn-sm rounded-circle p-2">
             <i class="bi bi-arrow-left"></i>
         </a>
         <div>
             <h1 class="h4 fw-bold mb-0">@ViewData["Title"]</h1>
+            <p class="text-muted small mb-0">Registro #@Model.ID</p>
         </div>
+        <!-- Badge del periodo -->
+        <span class="badge rounded-pill ms-auto px-3 py-2 fs-6"
+              style="background:#1D3557; color:#fff;">
+            <i class="bi bi-calendar2-check me-1"></i>Periodo @Model.ID_PERIODO
+        </span>
     </div>
 
-    <form asp-action="Observacion" method="post" id="formObservacion" novalidate>
-
+    <form asp-action="Observacion" method="post" novalidate>
         @Html.AntiForgeryToken()
+
+        <!-- Campos ocultos: identificadores que el POST necesita -->
         <input type="hidden" asp-for="ID" />
         <input type="hidden" asp-for="CLV_SUC" />
+        <input type="hidden" asp-for="ID_PERIODO" />
 
+        <!-- ── Datos de la Sucursal (solo lectura) ──────────────────────── -->
         <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header py-3 d-flex align-items-center gap-2"
-                 style="background:linear-gradient(135deg,#1D3557 0%,#457B9D 100%); color:#fff;">
-                <strong>Sucursal</strong>
+            <div class="card-header py-3"
+                 style="background:linear-gradient(135deg,#1D3557,#457B9D); color:#fff;">
+                <strong><i class="bi bi-building me-1"></i>Sucursal</strong>
+                <span class="badge bg-light text-dark ms-2 fw-normal small">Solo lectura</span>
             </div>
             <div class="card-body">
                 <div class="row g-4">
-                    <div class="col-12 col-md-4">
+                    <div class="col-6 col-md-3">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Ruta</label>
-                        <div class="form-control-plaintext fw-bold ps-0 text-dark">
-                            @Model.RUTA
-                        </div>
+                        <div class="fw-bold fs-5 text-primary">@Model.RUTA</div>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-6 col-md-3">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Región</label>
-                        <div class="form-control-plaintext fw-semibold ps-0 text-dark">
-                            @Model.REGION_NOMBRE
-                        </div>
+                        <div class="fw-semibold text-dark">@Model.REGION_NOMBRE</div>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-6 col-md-3">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Clave</label>
-                        <div class="form-control-plaintext text-muted ps-0">
-                            <code>@Model.CLV_SUC</code>
-                        </div>
+                        <div class="text-muted"><code>@Model.CLV_SUC</code></div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fw-semibold text-muted small text-uppercase">Periodo</label>
+                        <div class="fw-bold text-dark">@Model.ID_PERIODO</div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold text-muted small text-uppercase">Nombre de Sucursal</label>
-                        <div class="form-control-plaintext fw-bold text-dark ps-0 fs-5">
-                            @Model.SUCURSAL
+                        <label class="form-label fw-semibold text-muted small text-uppercase">Nombre Sucursal</label>
+                        <div class="fw-bold fs-5 text-dark">
+                            <i class="bi bi-shop me-1 text-primary"></i>@Model.SUCURSAL
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ── Fechas Estimadas (editables) ─────────────────────────────── -->
         <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header py-3 d-flex align-items-center gap-2"
-                 style="background:#e8f0fe;">
-                <strong class="text-primary">Fechas Estimadas</strong>
+            <div class="card-header py-3" style="background:#e8f0fe; border-left:4px solid #1D3557;">
+                <strong class="text-primary">
+                    <i class="bi bi-calendar-event me-1"></i>Fechas Estimadas
+                </strong>
             </div>
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-12 col-md-6">
-                        <label asp-for="FECHA_INI_ES" class="form-label fw-semibold">
-                            Fecha Inicio
-                        </label>
-                        <div class="input-group">
-                            <input name="FECHA_INI_ES"
-                                   type="date"
-                                   class="form-control"
-                                   id="inputFechaIniEst"
-                                   value="@FormatInput(Model.FECHA_INI_ES)"
-                                   onchange="calcularDesfase()" />
-                        </div>
+                        <label asp-for="FECHA_INI_ES" class="form-label fw-semibold">Fecha Inicio</label>
+                        <input name="FECHA_INI_ES"
+                               type="date"
+                               class="form-control"
+                               id="inputFechaIniEst"
+                               value="@FormatInput(Model.FECHA_INI_ES)"
+                               onchange="calcularDesfase()" />
                     </div>
                     <div class="col-12 col-md-6">
-                        <label asp-for="FECHA_FIN_ES" class="form-label fw-semibold">
-                            Fecha Término
-                        </label>
-                        <div class="input-group">
-                            <input name="FECHA_FIN_ES"
-                                   type="date"
-                                   class="form-control"
-                                   id="inputFechaFinEst"
-                                   value="@FormatInput(Model.FECHA_FIN_ES)"
-                                   onchange="calcularDesfase()" />
-                        </div>
+                        <label asp-for="FECHA_FIN_ES" class="form-label fw-semibold">Fecha Término</label>
+                        <input name="FECHA_FIN_ES"
+                               type="date"
+                               class="form-control"
+                               id="inputFechaFinEst"
+                               value="@FormatInput(Model.FECHA_FIN_ES)"
+                               onchange="calcularDesfase()" />
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ── Fechas Reales (solo lectura — DBICET, periodo @Model.ID_PERIODO) -->
         <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header py-3 d-flex align-items-center gap-2"
-                 style="background:#e8f5e9;">
-                <strong class="text-success">Fechas Reales</strong>
+            <div class="card-header py-3" style="background:#e8f5e9; border-left:4px solid #2e7d32;">
+                <strong class="text-success">
+                    <i class="bi bi-calendar-check me-1"></i>Fechas Reales
+                </strong>
+                <span class="badge bg-light text-muted ms-2 fw-normal small">
+                    DBICET · Periodo @Model.ID_PERIODO · Solo lectura
+                </span>
             </div>
             <div class="card-body">
                 <div class="row g-4">
-
                     <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold text-muted small text-uppercase">
-                            Fecha Inicio
-                        </label>
-                        <div class="input-group">
-                            <input type="text"
-                                   class="form-control bg-light text-muted fst-normal"
-                                   value="@FormatDisplay(Model.FECHA_INI_RE)"
-                                   readonly
-                                   id="displayFechaIniReal"
-                                   tabindex="-1" />
-                            <input type="hidden" id="valorFechaIniReal"
-                                   value="@FormatInput(Model.FECHA_INI_RE)" />
-                        </div>
+                        <label class="form-label fw-semibold text-muted small text-uppercase">Fecha Inicio Real</label>
+                        <input type="text"
+                               class="form-control bg-light text-muted"
+                               value="@FormatDisplay(Model.FECHA_INI_RE)"
+                               readonly tabindex="-1" />
+                        <!-- Valor ISO para que el JS calcule el desfase -->
+                        <input type="hidden" id="valorFechaIniReal" value="@FormatInput(Model.FECHA_INI_RE)" />
                     </div>
-
                     <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold text-muted small text-uppercase">
-                            Fecha Término
-                        </label>
-                        <div class="input-group">
-                            <input type="text"
-                                   class="form-control bg-light text-muted fst-normal"
-                                   value="@FormatDisplay(Model.FECHA_FIN_RE)"
-                                   readonly
-                                   tabindex="-1" />
-                            <input type="hidden" id="valorFechaFinReal"
-                                   value="@FormatInput(Model.FECHA_FIN_RE)" />
-                        </div>
+                        <label class="form-label fw-semibold text-muted small text-uppercase">Fecha Término Real</label>
+                        <input type="text"
+                               class="form-control bg-light text-muted"
+                               value="@FormatDisplay(Model.FECHA_FIN_RE)"
+                               readonly tabindex="-1" />
+                        <input type="hidden" id="valorFechaFinReal" value="@FormatInput(Model.FECHA_FIN_RE)" />
                     </div>
-
                 </div>
 
+                <!-- Panel de desfase ──────────────────────────────────────── -->
                 @{
-                    bool tieneIniEst = Model.FECHA_INI_ES.HasValue && Model.FECHA_INI_ES.Value > new DateTime(1900, 1, 1);
+                    bool tieneIniEst = Model.FECHA_INI_ES.HasValue && Model.FECHA_INI_ES > new DateTime(1900, 1, 1);
                     bool tieneIniReal = Model.FECHA_INI_RE.HasValue;
                     bool tieneFinReal = Model.FECHA_FIN_RE.HasValue;
 
                     int? dias = null;
-                    if (tieneIniEst && tieneIniReal && Model.FECHA_INI_ES.HasValue && Model.FECHA_INI_RE.HasValue)
-                    {
-                        dias = (int)(Model.FECHA_INI_RE.Value.Date - Model.FECHA_INI_ES.Value.Date).TotalDays;
-                    }
+                    if (tieneIniEst && tieneIniReal)
+                        dias = (int)(Model.FECHA_INI_RE!.Value.Date - Model.FECHA_INI_ES!.Value.Date).TotalDays;
                 }
 
                 @if (tieneIniEst && tieneIniReal)
                 {
-                    string panelClass, etiqueta;
-                    if (!tieneFinReal)
-                    {
-                        panelClass = "panel-en-proceso";
-                        etiqueta = "En proceso";
-                    }
-                    else if (dias > 0)
-                    {
-                        panelClass = "panel-atraso";
-                        etiqueta = $"{dias} día{(dias == 1 ? "" : "s")} de atraso";
-                    }
-                    else if (dias < 0)
-                    {
-                        panelClass = "panel-adelanto";
-                        etiqueta = $"{Math.Abs(dias ?? 0)} día{(Math.Abs(dias ?? 0) == 1 ? "" : "s")} de adelanto";
-                    }
-                    else
-                    {
-                        panelClass = "panel-ok";
-                        etiqueta = "EN TIEMPO";
-                    }
+                    string cls, etq;
+                    if (!tieneFinReal) { cls = "panel-en-proceso"; etq = "En proceso"; }
+                    else if (dias > 0) { cls = "panel-atraso"; etq = $"{dias} día{(dias == 1 ? "" : "s")} de atraso"; }
+                    else if (dias < 0) { cls = "panel-adelanto"; etq = $"{Math.Abs(dias ?? 0)} día{(Math.Abs(dias ?? 0) == 1 ? "" : "s")} de adelanto"; }
+                    else { cls = "panel-ok"; etq = "EN TIEMPO"; }
 
                     <div id="panelDesfaseServidor"
-                         class="mt-4 p-3 rounded-3 d-flex align-items-center gap-3 @panelClass">
-                        <div>
-                            <div class="fw-bold fs-5" id="textoDesfase">@etiqueta</div>
-                        </div>
+                         class="mt-4 p-3 rounded-3 d-flex align-items-center gap-3 @cls">
+                        <div class="fw-bold fs-5" id="textoDesfase">@etq</div>
                     </div>
                 }
-                else if (tieneIniEst && !tieneIniReal)
+                else if (tieneIniEst)
                 {
                     <div id="panelDesfaseServidor"
                          class="mt-4 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-inicio">
                         <div>
                             <div class="fw-bold fs-5">No iniciado</div>
-                            <small class="text-muted">Aún no existe fecha real registrada</small>
+                            <small class="text-muted">Sin fecha real en DBICET para el Periodo @Model.ID_PERIODO</small>
                         </div>
                     </div>
                 }
-                else if (!tieneIniEst)
+                else
                 {
                     <div id="panelDesfaseServidor"
                          class="mt-4 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-programar">
@@ -207,21 +183,23 @@
                     </div>
                 }
 
+                <!-- Panel dinámico (se actualiza al cambiar fechas estimadas) -->
                 <div id="panelDesfaseDinamico" class="mt-3 p-3 rounded-3 d-none">
-                    <div>
-                        <div class="fw-bold fs-5" id="textoDesfaseDinamico">—</div>
-                    </div>
+                    <div class="fw-bold fs-5" id="textoDesfaseDinamico">—</div>
                 </div>
+
             </div>
         </div>
 
+        <!-- ── Observaciones ─────────────────────────────────────────────── -->
         <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header py-3 bg-white border-bottom d-flex align-items-center gap-2">
-                <strong>Observaciones</strong>
+            <div class="card-header py-3 bg-white border-bottom">
+                <strong><i class="bi bi-chat-square-text me-1 text-primary"></i>Observaciones</strong>
             </div>
             <div class="card-body">
                 <label asp-for="OBSERVACIONES" class="form-label fw-semibold">
                     Detalle del mantenimiento
+                    <span class="text-muted fw-normal">(máximo 400 caracteres)</span>
                 </label>
                 <textarea name="OBSERVACIONES"
                           class="form-control"
@@ -229,17 +207,22 @@
                           id="txtObservaciones"
                           maxlength="400"
                           style="resize:none;"
-                          placeholder="Describe el estado del mantenimiento.">@Model.OBSERVACIONES</textarea>
+                          placeholder="Describe el estado del mantenimiento...">@Model.OBSERVACIONES</textarea>
+                <small class="text-muted mt-1 d-block text-end">
+                    <span id="contadorChars">0</span> / 400
+                </small>
             </div>
         </div>
 
+        <!-- ── Botones ───────────────────────────────────────────────────── -->
         <div class="d-flex gap-3 justify-content-end pt-2">
-            <a asp-action="Index" class="btn btn-outline-secondary px-4">
+            <a asp-action="Index" asp-route-filtroPeriodo="@Model.ID_PERIODO"
+               class="btn btn-outline-secondary px-4">
                 Cancelar
             </a>
             <button type="submit" class="btn btn-primary px-5 shadow-sm"
-                    style="background-color:#1D3557; border-color:#1D3557;">
-                Actualizar Registro
+                    style="background:#1D3557; border-color:#1D3557;">
+                <i class="bi bi-check-circle me-2"></i>Actualizar Registro
             </button>
         </div>
     </form>
@@ -281,74 +264,67 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-
     <script>
-        const panelDin  = document.getElementById('panelDesfaseDinamico');
-        const textoDin  = document.getElementById('textoDesfaseDinamico');
+        // ── Contador de caracteres ────────────────────────────────────────────────
+        const txtObs   = document.getElementById('txtObservaciones');
+        const contador = document.getElementById('contadorChars');
+
+        function actualizarContador() {
+            contador.textContent = txtObs.value.length;
+        }
+        txtObs.addEventListener('input', actualizarContador);
+        actualizarContador();
+
+        // ── Panel de desfase dinámico ─────────────────────────────────────────────
+        const panelDin = document.getElementById('panelDesfaseDinamico');
+        const textoDin = document.getElementById('textoDesfaseDinamico');
 
         function calcularDesfase() {
-            const panelServidor = document.getElementById('panelDesfaseServidor');
-            const fechaIniEstStr = document.getElementById('inputFechaIniEst')?.value  || '';
-            const fechaIniRealStr = document.getElementById('valorFechaIniReal')?.value || '';
+            const panelSrv      = document.getElementById('panelDesfaseServidor');
+            const fechaEstStr   = document.getElementById('inputFechaIniEst')?.value  || '';
+            const fechaRealStr  = document.getElementById('valorFechaIniReal')?.value || '';
 
-            // CASO 1: Sin fecha estimada
-            if (!fechaIniEstStr) {
+            if (!fechaEstStr) {
                 panelDin.classList.add('d-none');
-
-                if (panelServidor) {
-                    panelServidor.className = 'mt-4 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-programar';
-                    panelServidor.innerHTML = `
-                        <div>
-                            <div class="fw-bold fs-5">Sin programar</div>
-                            <small class="text-muted">Agrega una fecha estimada para ver el desfase</small>
-                        </div>
-                    `;
-                    panelServidor.classList.remove('d-none');
+                if (panelSrv) {
+                    panelSrv.className = 'mt-4 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-programar';
+                    panelSrv.innerHTML = '<div><div class="fw-bold fs-5">Sin programar</div>' +
+                        '<small class="text-muted">Agrega una fecha estimada para ver el desfase</small></div>';
+                    panelSrv.classList.remove('d-none');
                 }
                 return;
             }
 
-            // Ocultar panel estático
-            if (panelServidor) {
-                panelServidor.classList.add('d-none');
-            }
+            if (panelSrv) panelSrv.classList.add('d-none');
 
-            // CASO 2: Sin fecha real registrada
-            if (!fechaIniRealStr) {
-                panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-sin-inicio';
-                textoDin.innerHTML = `Sin iniciar — vista previa no disponible`;
+            if (!fechaRealStr) {
+                panelDin.className = 'mt-3 p-3 rounded-3 panel-sin-inicio';
+                textoDin.textContent = 'Sin fecha real registrada en DBICET para este periodo';
                 panelDin.classList.remove('d-none');
                 return;
             }
 
-            // Parseo seguro
-            const est  = new Date(fechaIniEstStr + 'T00:00:00');
-            const real = new Date(fechaIniRealStr + 'T00:00:00');
-
-            const diffTime = real.getTime() - est.getTime();
-            const diff = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-            // Renderizado de texto puro sin iconos
-            if (diff > 0) {
-                panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-atraso';
-                textoDin.innerHTML = `${diff} día${diff === 1 ? '' : 's'} de atraso`;
-            } else if (diff < 0) {
-                const diasAdelanto = Math.abs(diff);
-                panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-adelanto';
-                textoDin.innerHTML = `${diasAdelanto} día${diasAdelanto === 1 ? '' : 's'} de adelanto`;
-            } else {
-                panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-ok';
-                textoDin.innerHTML = `EN TIEMPO`;
-            }
+            const est  = new Date(fechaEstStr  + 'T00:00:00');
+            const real = new Date(fechaRealStr + 'T00:00:00');
+            const diff = Math.round((real - est) / 86400000);
 
             panelDin.classList.remove('d-none');
+
+            if (diff > 0) {
+                panelDin.className   = 'mt-3 p-3 rounded-3 panel-atraso';
+                textoDin.textContent = `${diff} día${diff === 1 ? '' : 's'} de atraso`;
+            } else if (diff < 0) {
+                const abs = Math.abs(diff);
+                panelDin.className   = 'mt-3 p-3 rounded-3 panel-adelanto';
+                textoDin.textContent = `${abs} día${abs === 1 ? '' : 's'} de adelanto`;
+            } else {
+                panelDin.className   = 'mt-3 p-3 rounded-3 panel-ok';
+                textoDin.textContent = 'EN TIEMPO';
+            }
         }
 
-        // Event listeners
         document.getElementById('inputFechaIniEst')?.addEventListener('change', calcularDesfase);
         document.getElementById('inputFechaFinEst')?.addEventListener('change', calcularDesfase);
-
-        // Inicialización al cargar la página
         window.addEventListener('DOMContentLoaded', calcularDesfase);
     </script>
 }

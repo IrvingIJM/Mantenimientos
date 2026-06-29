@@ -3,6 +3,11 @@ using System.Text;
 
 namespace Mantenimientos.Services
 {
+    /// <summary>
+    /// Acceso a datos que requieren SQL directo o JOINs entre mttos e Iker.
+    /// NOTA: Este servicio ya NO expone ObtenerPeriodosAsync().
+    ///       Los periodos los provee exclusivamente PeriodoService.
+    /// </summary>
     public class EmpDataService
     {
         private readonly string _connectionString;
@@ -18,7 +23,14 @@ namespace Mantenimientos.Services
             _logger = logger;
         }
 
-        // Rutas que tienen al menos un Seguimiento activo
+        // ─────────────────────────────────────────────────────────────────────
+        // Catálogos para filtros
+        // ─────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Rutas distintas que tienen al menos un Seguimiento activo
+        /// (independiente del periodo, para poblar el dropdown de filtro).
+        /// </summary>
         public async Task<List<int>> ObtenerRutasAsync()
         {
             var lista = new List<int>();
@@ -27,76 +39,28 @@ namespace Mantenimientos.Services
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
                 const string sql = @"
-                    SELECT DISTINCT suc.RUTA FROM Iker.dbo.Sucursales suc
+                    SELECT DISTINCT suc.RUTA
+                    FROM   Iker.dbo.Sucursales        suc
                     INNER JOIN mttos.dbo.Seguimientos s ON s.CLV_SUC = suc.CLV_SUC
-                    WHERE suc.ACTIVO = 1 AND suc.RUTA IS NOT NULL
+                    WHERE  suc.ACTIVO = 1
+                      AND  suc.RUTA  IS NOT NULL
                     ORDER BY suc.RUTA";
                 await using var cmd = new SqlCommand(sql, conn);
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                     lista.Add(Convert.ToInt32(reader.GetByte(0)));
             }
-            catch (Exception ex) { _logger.LogError(ex, "Error al obtener rutas."); }
-            return lista;
-        }
-
-        // Regiones que tienen al menos un Seguimiento activo
-        public async Task<List<int>> ObtenerRegionesAsync()
-        {
-            var lista = new List<int>();
-            try
-            {
-                await using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                const string sql = @"
-                    SELECT DISTINCT id_periodo 
-                    FROM Iker.dbo.DBICET 
-                    WHERE id_periodo IS NOT NULL 
-                    ORDER BY id_periodo DESC";
-
-                await using var cmd = new SqlCommand(sql, conn);
-                await using var reader = await cmd.ExecuteReaderAsync();
-
-                while (await reader.ReadAsync())
-                {
-                    if (!reader.IsDBNull(0))
-                    {
-                        lista.Add(reader.GetInt32(0));
-                    }
-                }
-            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener periodos.");
+                _logger.LogError(ex, "Error al obtener rutas.");
             }
             return lista;
         }
 
-        // Periodos disponibles en DBICET, ordenados descendente
-        public async Task<List<int>> ObtenerPeriodosAsync()
-        {
-            var lista = new List<int>();
-            try
-            {
-                await using var conn = new SqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                const string sql = @"
-                    SELECT DISTINCT id_periodo
-                    FROM Iker.dbo.DBICET
-                    WHERE id_periodo IS NOT NULL
-                    ORDER BY id_periodo DESC";
-                await using var cmd = new SqlCommand(sql, conn);
-                await using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                    lista.Add(reader.GetInt32(0));
-            }
-            catch (Exception ex) { _logger.LogError(ex, "Error al obtener periodos."); }
-            return lista;
-        }
-
-        // Sucursales activas de una ruta para el filtro dinámico del Index
+        /// <summary>
+        /// Sucursales activas de una ruta para el filtro dinámico del Index.
+        /// Solo incluye sucursales que ya tengan al menos un Seguimiento importado.
+        /// </summary>
         public async Task<List<SucursalDto>> ObtenerSucursalesPorRutaAsync(int ruta)
         {
             var lista = new List<SucursalDto>();
@@ -105,10 +69,11 @@ namespace Mantenimientos.Services
                 await using var conn = new SqlConnection(_connectionString);
                 await conn.OpenAsync();
                 const string sql = @"
-                    SELECT suc.CLV_SUC, suc.Sucursal, suc.RUTA, suc.ID_REG
-                    FROM Iker.dbo.Sucursales suc
+                    SELECT DISTINCT suc.CLV_SUC, suc.Sucursal, suc.RUTA, suc.ID_REG
+                    FROM   Iker.dbo.Sucursales        suc
                     INNER JOIN mttos.dbo.Seguimientos s ON s.CLV_SUC = suc.CLV_SUC
-                    WHERE suc.ACTIVO = 1 AND suc.RUTA = @Ruta
+                    WHERE  suc.ACTIVO = 1
+                      AND  suc.RUTA  = @Ruta
                     ORDER BY suc.Sucursal";
                 await using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@Ruta", ruta);
@@ -123,7 +88,7 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // Información completa de una sucursal por CLV_SUC
+        /// <summary>Información completa de una sucursal por CLV_SUC.</summary>
         public async Task<SucursalDto?> ObtenerInfoSucursalAsync(string clvSuc)
         {
             try
@@ -132,8 +97,8 @@ namespace Mantenimientos.Services
                 await conn.OpenAsync();
                 const string sql = @"
                     SELECT TOP 1 CLV_SUC, Sucursal, RUTA, ID_REG
-                    FROM Iker.dbo.Sucursales
-                    WHERE CLV_SUC = @ClvSuc";
+                    FROM   Iker.dbo.Sucursales
+                    WHERE  CLV_SUC = @ClvSuc";
                 await using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@ClvSuc", clvSuc);
                 await using var reader = await cmd.ExecuteReaderAsync();
@@ -147,7 +112,11 @@ namespace Mantenimientos.Services
             return null;
         }
 
-        // Fechas reales del periodo
+        /// <summary>
+        /// Fechas reales (F_Inicio, F_Termino) de una sucursal para el periodo indicado.
+        /// El parámetro <paramref name="periodo"/> es OBLIGATORIO — no tiene valor por defecto
+        /// para evitar usos accidentales con un periodo incorrecto.
+        /// </summary>
         public async Task<FechasRealesDto?> ObtenerFechasRealesAsync(string clvSuc, int periodo)
         {
             try
@@ -156,9 +125,9 @@ namespace Mantenimientos.Services
                 await conn.OpenAsync();
                 const string sql = @"
                     SELECT TOP 1 F_Inicio, F_Termino
-                    FROM Iker.dbo.DBICET
-                    WHERE CLV_SUC = @ClvSuc
-                      AND id_periodo = @Periodo
+                    FROM   Iker.dbo.DBICET
+                    WHERE  CLV_SUC    = @ClvSuc
+                      AND  id_periodo = @Periodo
                     ORDER BY F_Inicio DESC";
                 await using var cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@ClvSuc", clvSuc);
@@ -184,7 +153,19 @@ namespace Mantenimientos.Services
             return null;
         }
 
-        // consulta principal con joins
+        // ─────────────────────────────────────────────────────────────────────
+        // Consulta principal con JOINs
+        // ─────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Devuelve los Seguimientos del <paramref name="periodo"/> indicado, con todos los
+        /// campos enriquecidos por JOIN:
+        ///   JOIN 1 → Iker.dbo.Sucursales  : SUCURSAL, RUTA, REGION
+        ///   JOIN 2 → Iker.dbo.DBICET      : FECHA_INI_RE, FECHA_FIN_RE
+        ///
+        /// El parámetro <paramref name="periodo"/> es obligatorio — filtra tanto los registros
+        /// de Seguimientos (s.ID_PERIODO = @Periodo) como las fechas de DBICET.
+        /// </summary>
         public async Task<List<SeguimientoJoinDto>> ObtenerSeguimientosAsync(
             int periodo,
             int? filtroRuta = null,
@@ -202,28 +183,31 @@ namespace Mantenimientos.Services
                     SELECT
                         s.ID,
                         s.CLV_SUC,
-                        suc.Sucursal AS NOMBRE_SUCURSAL,
+                        s.ID_PERIODO,
+                        suc.Sucursal  AS SUCURSAL,
                         suc.RUTA,
-                        suc.ID_REG AS REGION,
+                        suc.ID_REG    AS REGION,
                         s.FECHA_INI_ES,
                         s.FECHA_FIN_ES,
-                        dbr.F_Inicio AS FECHA_INI_RE,
+                        dbr.F_Inicio  AS FECHA_INI_RE,
                         dbr.F_Termino AS FECHA_FIN_RE,
                         s.OBSERVACIONES
-                    FROM mttos.dbo.Seguimientos   s
+                    FROM  mttos.dbo.Seguimientos   s
                     INNER JOIN Iker.dbo.Sucursales suc
-                           ON s.CLV_SUC = suc.CLV_SUC
-                    LEFT JOIN (
+                           ON  s.CLV_SUC = suc.CLV_SUC
+                    LEFT  JOIN (
                         SELECT CLV_SUC, F_Inicio, F_Termino,
                                ROW_NUMBER() OVER (
                                    PARTITION BY CLV_SUC
                                    ORDER BY F_Inicio DESC
                                ) AS fila
-                        FROM Iker.dbo.DBICET
-                        WHERE id_periodo = @Periodo
+                        FROM   Iker.dbo.DBICET
+                        WHERE  id_periodo = @Periodo
                     ) dbr ON s.CLV_SUC = dbr.CLV_SUC AND dbr.fila = 1
-                    WHERE suc.ACTIVO = 1");
+                    WHERE  suc.ACTIVO   = 1
+                      AND  s.ID_PERIODO = @Periodo");
 
+                // ── Parámetros ────────────────────────────────────────────────
                 await using var cmd = new SqlCommand();
                 cmd.Connection = conn;
                 cmd.Parameters.AddWithValue("@Periodo", periodo);
@@ -245,8 +229,9 @@ namespace Mantenimientos.Services
                 }
                 if (ocultarSinFecha)
                 {
-                    sql.Append(@" AND dbr.F_Inicio IS NOT NULL
-                                  AND dbr.F_Inicio > '1900-01-01'");
+                    sql.Append(@"
+                      AND dbr.F_Inicio IS NOT NULL
+                      AND dbr.F_Inicio > '1900-01-01'");
                 }
 
                 sql.Append(" ORDER BY suc.RUTA, suc.Sucursal");
@@ -261,7 +246,8 @@ namespace Mantenimientos.Services
                     {
                         ID = reader.GetInt32(reader.GetOrdinal("ID")),
                         CLV_SUC = reader["CLV_SUC"].ToString()!,
-                        SUCURSAL = reader["NOMBRE_SUCURSAL"].ToString()!,
+                        ID_PERIODO = reader.GetInt32(reader.GetOrdinal("ID_PERIODO")),
+                        SUCURSAL = reader["SUCURSAL"].ToString()!,
                         RUTA = reader.GetByte(reader.GetOrdinal("RUTA")),
                         REGION = reader.GetByte(reader.GetOrdinal("REGION")),
                         FECHA_INI_ES = reader["FECHA_INI_ES"] as DateTime?,
@@ -274,11 +260,15 @@ namespace Mantenimientos.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener seguimientos con JOIN.");
+                _logger.LogError(ex, "Error al obtener seguimientos con JOIN (periodo {P}).", periodo);
                 throw;
             }
             return lista;
         }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Helpers privados
+        // ─────────────────────────────────────────────────────────────────────
 
         private static SucursalDto LeerSucursalDto(SqlDataReader r) => new()
         {
@@ -287,12 +277,11 @@ namespace Mantenimientos.Services
             RUTA = r.GetByte(r.GetOrdinal("RUTA")),
             REGION = r.GetByte(r.GetOrdinal("ID_REG"))
         };
-
-        internal async Task<IEnumerable<object>> ObtenerSeguimientosAsync(int? filtroRuta, int? filtroMes, bool ocultarSinFecha, int periodoSeleccionado)
-        {
-            throw new NotImplementedException();
-        }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DTOs
+    // ─────────────────────────────────────────────────────────────────────────
 
     public class SucursalDto
     {
@@ -312,6 +301,7 @@ namespace Mantenimientos.Services
     {
         public int ID { get; set; }
         public string CLV_SUC { get; set; } = string.Empty;
+        public int ID_PERIODO { get; set; }
         public string SUCURSAL { get; set; } = string.Empty;
         public byte RUTA { get; set; }
         public byte REGION { get; set; }

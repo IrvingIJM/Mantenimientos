@@ -2,7 +2,6 @@ using Mantenimientos.Data;
 using Mantenimientos.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
-using Mantenimientos.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +20,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //Servicios de la base de datos
 builder.Services.AddScoped<EmpDataService>();
 builder.Services.AddScoped<PeriodoService>();
+builder.Services.AddHostedService<ImportacionAutomaticaService>();
 
 //Logging
 builder.Services.AddLogging();
