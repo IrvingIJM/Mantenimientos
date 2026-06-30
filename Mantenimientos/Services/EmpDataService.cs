@@ -157,7 +157,7 @@ namespace Mantenimientos.Services
                         suc.ID_REG AS REGION,
                         s.FECHA_INI_ES,
                         s.FECHA_FIN_ES,
-                        dbr.F_Inicio  AS FECHA_INI_RE,
+                        dbr.F_Inicio AS FECHA_INI_RE,
                         dbr.F_Termino AS FECHA_FIN_RE,
                         s.OBSERVACIONES
                     FROM mttos.dbo.Seguimientos s
@@ -192,7 +192,8 @@ namespace Mantenimientos.Services
                 }
                 if (filtroMes.HasValue)
                 {
-                    sql.Append(" AND MONTH(dbr.F_Inicio) = @Mes");
+                    sql.Append(@" AND dbr.F_Inicio > '1900-01-01'
+                      AND MONTH(dbr.F_Inicio) = @Mes");
                     cmd.Parameters.AddWithValue("@Mes", filtroMes.Value);
                 }
                 if (ocultarSinFecha)
@@ -271,5 +272,9 @@ namespace Mantenimientos.Services
         public DateTime? FECHA_INI_RE { get; set; }
         public DateTime? FECHA_FIN_RE { get; set; }
         public string? OBSERVACIONES { get; set; }
+        public int? Dias =>
+       (FECHA_FIN_RE.HasValue && FECHA_FIN_ES.HasValue)
+           ? (int?)(FECHA_FIN_RE.Value.Date - FECHA_FIN_ES.Value.Date).Days
+           : null;
     }
 }

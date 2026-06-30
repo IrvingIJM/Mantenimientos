@@ -229,7 +229,7 @@ namespace Mantenimientos.Controllers
                       AND NOT EXISTS (
                               SELECT 1
                               FROM mttos.dbo.Seguimientos AS s
-                              WHERE s.CLV_SUC    = suc.CLV_SUC
+                              WHERE s.CLV_SUC = suc.CLV_SUC
                                 AND s.ID_PERIODO = @PeriodoActual
                            );";
 
@@ -273,23 +273,20 @@ namespace Mantenimientos.Controllers
             hoja.Style.Font.FontSize = 10;
 
             // Encabezados
-            hoja.Cell("A3").Value = "Ruta"; hoja.Range("A3:A4").Merge();
-            hoja.Cell("B3").Value = "Región"; hoja.Range("B3:B4").Merge();
             hoja.Cell("C3").Value = "Sucursal"; hoja.Range("C3:C4").Merge();
             hoja.Cell("D3").Value = "Fecha Estimada"; hoja.Range("D3:E3").Merge();
             hoja.Cell("F3").Value = "Fecha Real"; hoja.Range("F3:G3").Merge();
-            hoja.Cell("H3").Value = "Observaciones"; hoja.Range("H3:H4").Merge();
+            hoja.Cell("H3").Value = "Días desfasados"; hoja.Range("H3:H4").Merge();
+            hoja.Cell("I3").Value = "Observaciones"; hoja.Range("I3:I4").Merge();
 
             hoja.Cell("D4").Value = "Inicio";
             hoja.Cell("E4").Value = "Fin";
             hoja.Cell("F4").Value = "Inicio";
             hoja.Cell("G4").Value = "Fin";
 
-            var rango = hoja.Range("A3:H4");
+            var rango = hoja.Range("C3:I4");
             rango.Style
                  .Font.SetBold(true)
-                 .Fill.SetBackgroundColor(XLColor.FromHtml("#1D3557"))
-                 .Font.SetFontColor(XLColor.White)
                  .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
                  .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
             rango.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
@@ -299,31 +296,31 @@ namespace Mantenimientos.Controllers
             int fila = 5;
             foreach (var d in datos)
             {
-                hoja.Cell(fila, "A").Value = d.RUTA;
-                hoja.Cell(fila, "B").Value = d.REGION;
                 hoja.Cell(fila, "C").Value = d.SUCURSAL;
                 hoja.Cell(fila, "D").Value = FormatFechaExcel(d.FECHA_INI_ES);
                 hoja.Cell(fila, "E").Value = FormatFechaExcel(d.FECHA_FIN_ES);
                 hoja.Cell(fila, "F").Value = FormatFechaExcel(d.FECHA_INI_RE);
                 hoja.Cell(fila, "G").Value = FormatFechaExcel(d.FECHA_FIN_RE);
-                hoja.Cell(fila, "H").Value = d.OBSERVACIONES ?? string.Empty;
+                hoja.Cell(fila, "H").Value = d.Dias;
+                hoja.Cell(fila, "I").Value = d.OBSERVACIONES ?? string.Empty;
 
-                hoja.Range(fila, 1, fila, 8).Style
+                hoja.Range(fila, 3, fila, 9).Style
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetInsideBorder(XLBorderStyleValues.Thin);
-                hoja.Range(fila, 4, fila, 7).Style
+                hoja.Range(fila, 4, fila, 8).Style
                     .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+
                 fila++;
             }
 
-            hoja.Columns("A:H").AdjustToContents();
+            hoja.Columns("C:I").AdjustToContents();
 
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
             return File(
                 ms.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Mantenimientos_P{periodo}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+                $"Mantenimientos_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
         // AJAX  GET /Seguimiento/ObtenerSucursalesFiltro?ruta=X
