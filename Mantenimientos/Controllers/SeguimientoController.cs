@@ -249,6 +249,7 @@ namespace Mantenimientos.Controllers
         [HttpGet]
         public async Task<IActionResult> Exportar(
             int? filtroRuta,
+            string? filtroEmpresa,
             int? filtroMes,
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
@@ -259,6 +260,7 @@ namespace Mantenimientos.Controllers
             var datos = await _empDataService.ObtenerSeguimientosAsync(
                 periodo: periodo,
                 filtroRuta: filtroRuta,
+                filtroEmpresa: filtroEmpresa,
                 filtroMes: filtroMes,
                 ocultarSinFecha: ocultarSinFecha);
 

@@ -179,8 +179,8 @@
                         @foreach (var item in Model.Seguimientos)
                         {
                             var sinFechaEst = !item.FECHA_INI_ES.HasValue || item.FECHA_INI_ES <= new DateTime(1900, 1, 1);
-                            var sinFechaRe  = !item.FECHA_INI_RE.HasValue;
-                            var sinFinReal  = !item.FECHA_FIN_RE.HasValue;
+                            var sinFechaRe = !item.FECHA_INI_RE.HasValue;
+                            var sinFinReal = !item.FECHA_FIN_RE.HasValue;
 
                             int diasDif = 0;
                             if (!sinFechaEst && !sinFechaRe)
@@ -249,7 +249,7 @@
 <script>
     // URLs generadas por Razor — funcionan en cualquier virtual path de red
     const urlExportar = '@Url.Action("Exportar", "Seguimiento")';
-    const urlIndex    = '@Url.Action("Index",    "Seguimiento")';
+    const urlIndex = '@Url.Action("Index", "Seguimiento")';
 
     // Tooltips
     document.querySelectorAll('[data-bs-toggle="tooltip"]')
@@ -263,14 +263,16 @@
     // Exportar — pasa los mismos filtros activos al endpoint de descarga
     document.getElementById('btnExportar').addEventListener('click', () => {
         const p = new URLSearchParams();
-        const ruta    = document.getElementById('filtroRuta')?.value;
-        const mes     = document.getElementById('filtroMes')?.value;
+        const ruta = document.getElementById('filtroRuta')?.value;
+        const empresa = document.getElementById('filtroEmpresa')?.value;
+        const mes = document.getElementById('filtroMes')?.value;
         const periodo = document.getElementById('filtroPeriodo')?.value;
         const ocultar = document.getElementById('ocultarSinFecha')?.checked;
 
-        if (ruta)    p.append('filtroRuta',      ruta);
-        if (mes)     p.append('filtroMes',       mes);
-        if (periodo) p.append('filtroPeriodo',   periodo);
+        if (ruta) p.append('filtroRuta', ruta);
+        if (empresa) p.append('filtroEmpresa', empresa);
+        if (mes) p.append('filtroMes', mes);
+        if (periodo) p.append('filtroPeriodo', periodo);
         if (ocultar) p.append('ocultarSinFecha', 'true');
 
         window.location.href = urlExportar + '?' + p.toString();
