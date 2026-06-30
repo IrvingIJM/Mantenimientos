@@ -318,7 +318,7 @@ namespace Mantenimientos.Controllers
             return File(
                 ms.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Mantenimientos_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
+                $"Fechas_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
         // AJAX  GET /Seguimiento/ObtenerSucursalesFiltro?ruta=X
