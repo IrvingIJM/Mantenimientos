@@ -12,25 +12,20 @@ namespace Mantenimientos.Services
         private readonly ILogger<ImportacionAutomaticaService> _logger;
         private readonly TimeSpan _intervalo;
 
-        public ImportacionAutomaticaService(
-            IServiceProvider serviceProvider,
-            ILogger<ImportacionAutomaticaService> logger,
+        public ImportacionAutomaticaService(IServiceProvider serviceProvider, ILogger<ImportacionAutomaticaService> logger,
             IConfiguration config)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
 
-            // Intervalo configurable; si no está en appsettings usa 60 minutos.
-            int minutos = config.GetValue<int>(
-                "ImportacionAutomatica:IntervaloMinutos", 60);
+            // Intervalo configurable si no está en appsettings usa 60 minutos.
+            int minutos = config.GetValue<int>("ImportacionAutomatica:IntervaloMinutos", 60);
             _intervalo = TimeSpan.FromMinutes(minutos);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation(
-                "ImportacionAutomatica: servicio iniciado — intervalo {Min} min.",
-                _intervalo.TotalMinutes);
+            _logger.LogInformation("ImportacionAutomatica: servicio iniciado — intervalo {Min} min.", _intervalo.TotalMinutes);
 
             // Ejecución inicial al arrancar
             await EjecutarImportAsync();
@@ -43,7 +38,6 @@ namespace Mantenimientos.Services
             {
                 await EjecutarImportAsync();
             }
-
             _logger.LogInformation("ImportacionAutomatica: servicio detenido.");
         }
 
@@ -58,42 +52,33 @@ namespace Mantenimientos.Services
 
                 int periodoActual = await periodoService.ObtenerPeriodoActualAsync();
 
-                // Inserta SOLO las sucursales activas que no tienen registro en Seguimientos para el periodo actual.
+                // Inserta solo las sucursales activas que no tienen registro en Seguimientos para el periodo actual.
                 const string sql = @"
                     INSERT INTO mttos.dbo.Seguimientos (CLV_SUC, ID_PERIODO)
                     SELECT suc.CLV_SUC, @PeriodoActual
                     FROM Iker.dbo.Sucursales AS suc
-                    WHERE suc.ACTIVO = 1
-                      AND NOT EXISTS (
-                               SELECT 1
-                               FROM mttos.dbo.Seguimientos AS s
-                               WHERE s.CLV_SUC = suc.CLV_SUC
-                                 AND s.ID_PERIODO = @PeriodoActual
-                           );";
+                    WHERE suc.ACTIVO = 1 AND NOT EXISTS ( SELECT 1
+                    FROM mttos.dbo.Seguimientos AS s
+                    WHERE s.CLV_SUC = suc.CLV_SUC AND s.ID_PERIODO = @PeriodoActual);";
 
-                int insertados = await context.Database.ExecuteSqlRawAsync(
-                    sql,
-                    new SqlParameter("@PeriodoActual", periodoActual));
+                int insertados = await context.Database.ExecuteSqlRawAsync(sql, new SqlParameter("@PeriodoActual", periodoActual));
 
                 if (insertados > 0)
                 {
                     _logger.LogInformation(
-                        "ImportacionAutomatica: {N} sucursal(es) nueva(s) importada(s) " +
-                        "para Periodo {P} — {Hora}",
-                        insertados, periodoActual,
+                        "ImportacionAutomatica: {N} sucursal(es) nueva(s) importada(s) " + "para Periodo {P} — {Hora}", insertados, periodoActual,
                         DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
                 }
                 else
                 {
                     _logger.LogDebug(
-                        "ImportacionAutomatica: sin cambios para Periodo {P} — {Hora}",
-                        periodoActual,
+                        "ImportacionAutomatica: sin cambios para Periodo {P} — {Hora}", periodoActual,
                         DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"));
                 }
             }
             catch (Exception ex)
             {
-                // Loguear sin romper el ciclo — el servicio sigue intentando
+                // Loguear sin romper el ciclo
                 _logger.LogError(ex,
                     "ImportacionAutomatica: error durante la importación. " +
                     "Se reintentará en {Min} minutos.", _intervalo.TotalMinutes);

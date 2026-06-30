@@ -18,31 +18,21 @@ namespace Mantenimientos.Data
                 entity.ToTable("Seguimientos");
                 entity.HasKey(e => e.ID);
 
-                entity.Property(e => e.CLV_SUC)
-                      .IsRequired()
-                      .HasMaxLength(50);
+                entity.Property(e => e.CLV_SUC).IsRequired().HasMaxLength(50);
 
-                entity.Property(e => e.ID_PERIODO)
-                      .IsRequired()
-                      .HasDefaultValue(0);
+                entity.Property(e => e.ID_PERIODO).IsRequired().HasDefaultValue(0);
 
-                entity.Property(e => e.FECHA_INI_ES)
-                      .HasColumnType("date");
+                entity.Property(e => e.FECHA_INI_ES).HasColumnType("date");
 
-                entity.Property(e => e.FECHA_FIN_ES)
-                      .HasColumnType("date");
+                entity.Property(e => e.FECHA_FIN_ES).HasColumnType("date");
 
-                entity.Property(e => e.OBSERVACIONES)
-                      .HasColumnType("nvarchar(max)");
+                entity.Property(e => e.OBSERVACIONES).HasColumnType("nvarchar(max)");
 
                 // sucursal no puede tener dos para el mismo periodo
-                entity.HasIndex(e => new { e.CLV_SUC, e.ID_PERIODO })
-                      .HasDatabaseName("IX_Seguimiento_ClvSuc_Periodo")
-                      .IsUnique();
+                entity.HasIndex(e => new { e.CLV_SUC, e.ID_PERIODO }).HasDatabaseName("IX_Seguimiento_ClvSuc_Periodo").IsUnique();
 
                 // para filtros por fecha estimada
-                entity.HasIndex(e => e.FECHA_INI_ES)
-                      .HasDatabaseName("IX_Seguimiento_FechaIniEst");
+                entity.HasIndex(e => e.FECHA_INI_ES).HasDatabaseName("IX_Seguimiento_FechaIniEst");
             });
         }
     }

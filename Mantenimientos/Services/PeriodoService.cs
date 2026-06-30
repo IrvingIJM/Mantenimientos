@@ -15,8 +15,7 @@ namespace Mantenimientos.Services
         public PeriodoService(IConfiguration config, ILogger<PeriodoService> logger)
         {
             _connDB = config.GetConnectionString("DatabaseConnection")
-                ?? throw new InvalidOperationException(
-                    "No se encontró 'DatabaseConnection' en appsettings.json.");
+                ?? throw new InvalidOperationException("No se encontró 'DatabaseConnection' en appsettings.json.");
 
             _spName = config["PeriodoActualSP"] ?? "dbo.periodoActual";
             _logger = logger;
@@ -28,9 +27,8 @@ namespace Mantenimientos.Services
                 return _cache.Value;
 
             await _lock.WaitAsync();
-            try
-            {
-                // Double-check después de adquirir el lock
+
+            // Double-check después de adquirir el lock
                 if (_cache.HasValue && DateTime.Now < _expiry)
                     return _cache.Value;
 
@@ -39,16 +37,7 @@ namespace Mantenimientos.Services
                 _cache = periodo;
                 _expiry = DateTime.Now.AddMinutes(30);
 
-                _logger.LogInformation(
-                    "PeriodoService: periodo actual = {Periodo} (expira {Expiry:HH:mm:ss})",
-                    periodo, _expiry);
-
                 return periodo;
-            }
-            finally
-            {
-                _lock.Release();
-            }
         }
 
         public async Task<List<PeriodoDto>> ObtenerPeriodosDisponiblesAsync()
@@ -83,19 +72,10 @@ namespace Mantenimientos.Services
                 };
 
                 var resultado = await cmd.ExecuteScalarAsync();
-
-                if (resultado is null or DBNull)
-                    throw new InvalidOperationException(
-                        $"El SP '{_spName}' no devolvió ningún valor.");
-
                 return Convert.ToInt32(resultado);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogWarning(ex,
-                    "PeriodoService: error al llamar SP '{Sp}'. Usando fallback (MAX id_periodo).",
-                    _spName);
-
                 return await FallbackMaxPeriodoAsync();
             }
         }
@@ -112,11 +92,6 @@ namespace Mantenimientos.Services
 
             await using var cmd = new SqlCommand(sql, conn);
             var result = await cmd.ExecuteScalarAsync();
-
-            if (result is null or DBNull)
-                throw new InvalidOperationException(
-                    "No se pudo determinar el periodo actual desde DBICET.");
-
             return Convert.ToInt32(result);
         }
     }

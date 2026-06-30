@@ -22,7 +22,7 @@ namespace Mantenimientos.Models
         [Column(TypeName = "date")]
         public DateTime? FECHA_FIN_ES { get; set; }
 
-        [Column(TypeName = "nvarchar(max)")]
+        [Column(TypeName = "nvarchar(400)")]
         public string? OBSERVACIONES { get; set; }
     }
 }

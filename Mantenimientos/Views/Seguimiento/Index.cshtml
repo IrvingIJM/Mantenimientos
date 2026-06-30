@@ -40,6 +40,32 @@
             <form asp-action="Index" method="get" id="formFiltros">
                 <div class="row g-3 align-items-end">
 
+                    <!-- Filtro empresa -->
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Empresa</label>
+                        <select name="filtroEmpresa" id="filtroEmpresa" class="form-select">
+                            <option value="">— Todas —</option>
+                            @if (Model.FiltroEmpresa == "BIM")
+                            {
+                                <option value="BIM" selected>Bimbo</option>
+                            }
+                            else
+                            {
+                                <option value="BIM">Bimbo</option>
+                            }
+
+                            @if (Model.FiltroEmpresa == "BAR")
+                            {
+                                <option value="BAR" selected>Barcel</option>
+                            }
+                            else
+                            {
+                                <option value="BAR">Barcel</option>
+                            }
+                            </select>
+                    </div>
+
+                    <!-- Filtro ruta-->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Ruta</label>
                         <select name="filtroRuta" id="filtroRuta" class="form-select">
@@ -51,6 +77,7 @@
                         </select>
                     </div>
 
+                    <!-- Filtro mes-->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Mes</label>
                         <select name="filtroMes" id="filtroMes" class="form-select">
@@ -62,6 +89,7 @@
                         </select>
                     </div>
 
+                    <!--Filtro periodo-->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Periodo</label>
                         <select name="filtroPeriodo" id="filtroPeriodo" class="form-select">

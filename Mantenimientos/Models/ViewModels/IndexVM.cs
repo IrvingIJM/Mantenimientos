@@ -8,8 +8,8 @@ namespace Mantenimientos.Models.ViewModels
         public List<SeguimientoViewModel> Seguimientos { get; set; } = new();
 
         public int PeriodoActual { get; set; }
-
         public int? FiltroRuta { get; set; }
+        public string? FiltroEmpresa { get; set; }
         public int? FiltroMes { get; set; }
 
         public int FiltroPeriodo { get; set; }
@@ -17,7 +17,6 @@ namespace Mantenimientos.Models.ViewModels
         // Listas para los dropdowns
         public List<SelectListItem> RutasDisponibles { get; set; } = new();
         public List<SelectListItem> MesesDisponibles { get; set; } = new();
-
         public List<SelectListItem> PeriodosDisponibles { get; set; } = new();
     }
 

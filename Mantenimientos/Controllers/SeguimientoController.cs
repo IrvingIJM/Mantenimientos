@@ -32,6 +32,7 @@ namespace Mantenimientos.Controllers
         // GET  /Seguimiento/Index
         public async Task<IActionResult> Index(
             int? filtroRuta,
+            string? filtroEmpresa,
             int? filtroMes,
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
@@ -43,6 +44,7 @@ namespace Mantenimientos.Controllers
             var datos = await _empDataService.ObtenerSeguimientosAsync(
                 periodo: periodoActivo,
                 filtroRuta: filtroRuta,
+                filtroEmpresa: filtroEmpresa,
                 filtroMes: filtroMes,
                 ocultarSinFecha: ocultarSinFecha);
 
@@ -72,6 +74,7 @@ namespace Mantenimientos.Controllers
                 PeriodoActual = periodoActual,
                 FiltroPeriodo = periodoActivo,
                 FiltroRuta = filtroRuta,
+                FiltroEmpresa = filtroEmpresa,
                 FiltroMes = filtroMes,
 
                 Seguimientos = datos.Select(d => new SeguimientoViewModel
@@ -173,8 +176,7 @@ namespace Mantenimientos.Controllers
             {
                 // Recargar datos de solo lectura para volver a mostrar la vista
                 var sucInfo = await _empDataService.ObtenerInfoSucursalAsync(model.CLV_SUC);
-                var fechasReales = await _empDataService.ObtenerFechasRealesAsync(
-                    model.CLV_SUC, model.ID_PERIODO);
+                var fechasReales = await _empDataService.ObtenerFechasRealesAsync(model.CLV_SUC, model.ID_PERIODO);
 
                 model.SUCURSAL = sucInfo?.Nombre ?? model.CLV_SUC;
                 model.RUTA = sucInfo?.RUTA ?? 0;
@@ -189,7 +191,7 @@ namespace Mantenimientos.Controllers
                 var existente = await _context.Seguimientos.FindAsync(model.ID);
                 if (existente is null) return NotFound();
 
-                // ID_PERIODO NO se modifica
+                // ID_PERIODO no se modifica
                 existente.FECHA_INI_ES = model.FECHA_INI_ES;
                 existente.FECHA_FIN_ES = model.FECHA_FIN_ES;
                 existente.OBSERVACIONES = model.OBSERVACIONES;
@@ -200,14 +202,13 @@ namespace Mantenimientos.Controllers
                 TempData["Mensaje"] = "Registro actualizado con éxito.";
                 TempData["TipoAlerta"] = "success";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al guardar observación para ID={ID}.", model.ID);
                 TempData["Mensaje"] = "Error al guardar. Intente de nuevo.";
                 TempData["TipoAlerta"] = "danger";
             }
 
-            // Regresar al Index mostrando el periodo del registro que se edito
+            // regresa al Index mostrando el periodo del registro que se edito
             return RedirectToAction(nameof(Index),
                 new { filtroPeriodo = model.ID_PERIODO });
         }
@@ -226,12 +227,8 @@ namespace Mantenimientos.Controllers
                     SELECT suc.CLV_SUC, @PeriodoActual
                     FROM Iker.dbo.Sucursales AS suc
                     WHERE suc.ACTIVO = 1
-                      AND NOT EXISTS (
-                              SELECT 1
-                              FROM mttos.dbo.Seguimientos AS s
-                              WHERE s.CLV_SUC = suc.CLV_SUC
-                                AND s.ID_PERIODO = @PeriodoActual
-                           );";
+                    AND NOT EXISTS (SELECT 1 FROM mttos.dbo.Seguimientos AS s
+                    WHERE s.CLV_SUC = suc.CLV_SUC AND s.ID_PERIODO = @PeriodoActual);";
 
                 int insertados = await _context.Database.ExecuteSqlRawAsync(
                     sql,
@@ -240,9 +237,8 @@ namespace Mantenimientos.Controllers
                 TempData["Mensaje"] = $"Importación exitosa — {insertados} sucursales agregadas para el Periodo {periodoActual}.";
                 TempData["TipoAlerta"] = "success";
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al importar sucursales.");
                 TempData["Mensaje"] = "Error al importar sucursales. Revisa los logs.";
                 TempData["TipoAlerta"] = "danger";
             }
