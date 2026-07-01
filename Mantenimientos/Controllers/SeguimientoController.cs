@@ -117,7 +117,12 @@ namespace Mantenimientos.Controllers
 
         // GET  /Seguimiento/Observacion/{id}
         [HttpGet]
-        public async Task<IActionResult> Observacion(int? id)
+        public async Task<IActionResult> Observacion(int? id,
+            int? filtroRuta = null,
+            string? filtroEmpresa = null,
+            int? filtroMes = null,
+            int? filtroPeriodo = null,
+            bool ocultarSinFecha = false)
         {
             if (!id.HasValue || id.Value <= 0)
                 return RedirectToAction(nameof(Index));
@@ -153,7 +158,13 @@ namespace Mantenimientos.Controllers
                 FECHA_FIN_ES = seguimiento.FECHA_FIN_ES,
                 FECHA_INI_RE = fechasReales?.FechaInicio,
                 FECHA_FIN_RE = fechasReales?.FechaFin,
-                OBSERVACIONES = seguimiento.OBSERVACIONES
+                OBSERVACIONES = seguimiento.OBSERVACIONES,
+                // Guardar los filtros para retornar con ellos
+                FiltroRuta = filtroRuta,
+                FiltroEmpresa = filtroEmpresa,
+                FiltroMes = filtroMes,
+                FiltroPeriodo = filtroPeriodo,
+                OcultarSinFecha = ocultarSinFecha
             };
 
             return View(vm);
@@ -208,9 +219,16 @@ namespace Mantenimientos.Controllers
                 TempData["TipoAlerta"] = "danger";
             }
 
-            // regresa al Index mostrando el periodo del registro que se edito
+            // Retornar al Index con los filtros que se tenían activos
             return RedirectToAction(nameof(Index),
-                new { filtroPeriodo = model.ID_PERIODO });
+                new
+                {
+                    filtroRuta = model.FiltroRuta,
+                    filtroEmpresa = model.FiltroEmpresa,
+                    filtroMes = model.FiltroMes,
+                    filtroPeriodo = model.FiltroPeriodo,
+                    ocultarSinFecha = model.OcultarSinFecha
+                });
         }
 
         // POST /Seguimiento/Importar

@@ -76,8 +76,8 @@
                             }
                         </select>
                     </div>
-
-                    <!-- Filtro mes-->
+                    
+                    <!-- Filtro mes -->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Mes</label>
                         <select name="filtroMes" id="filtroMes" class="form-select">
@@ -89,15 +89,13 @@
                         </select>
                     </div>
 
-                    <!--Filtro periodo-->
+                    <!-- Filtro periodo-->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Periodo</label>
                         <select name="filtroPeriodo" id="filtroPeriodo" class="form-select">
                             @foreach (var item in Model.PeriodosDisponibles)
                             {
-                                <!option value="@item.Value" @(item.Selected ? "selected" : "")>
-                                    @item.Text
-                                </!option>
+                                <!option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</!option>
                             }
                         </select>
                     </div>
@@ -231,7 +229,13 @@
                                     }
                                 </td>
                                 <td class="text-center">
-                                    <a href="@Url.Action("Observacion", "Seguimiento", new { id = item.ID })"
+                                    <a asp-action="Observacion" 
+                                       asp-route-id="@item.ID"
+                                       asp-route-filtroRuta="@Model.FiltroRuta"
+                                       asp-route-filtroEmpresa="@Model.FiltroEmpresa"
+                                       asp-route-filtroMes="@Model.FiltroMes"
+                                       asp-route-filtroPeriodo="@Model.FiltroPeriodo"
+                                       asp-route-ocultarSinFecha="@ViewBag.OcultarSinFecha.ToString()"
                                        class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
                                         <i class="bi bi-pencil me-1"></i>Editar
                                     </a>
