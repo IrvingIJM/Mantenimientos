@@ -40,22 +40,28 @@
             </div>
             <div class="card-body">
                 <div class="row g-4">
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Ruta</label>
                         <div class="form-control-plaintext fw-bold ps-0 text-dark">
                             @Model.RUTA
                         </div>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Región</label>
                         <div class="form-control-plaintext fw-semibold ps-0 text-dark">
                             @Model.REGION_NOMBRE
                         </div>
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <label class="form-label fw-semibold text-muted small text-uppercase">Clave</label>
                         <div class="form-control-plaintext text-muted ps-0">
                             <code>@Model.CLV_SUC</code>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label fw-semibold text-muted small text-uppercase">Periodo</label>
+                        <div class="form-control-plaintext fw-semibold ps-0 text-dark">
+                            @Model.ID_PERIODO
                         </div>
                     </div>
                     <div class="col-12">
@@ -87,6 +93,7 @@
                                    id="inputFechaIniEst"
                                    value="@FormatInput(Model.FECHA_INI_ES)"
                                    onchange="calcularDesfase()" />
+
                         </div>
                     </div>
                     <div class="col-12 col-md-6">
@@ -285,6 +292,52 @@
     <script>
         const panelDin  = document.getElementById('panelDesfaseDinamico');
         const textoDin  = document.getElementById('textoDesfaseDinamico');
+        
+        function configurarLimitesFechaInicio() {
+            const fechaInicio = document.getElementById("inputFechaIniEst");
+
+            if (!fechaInicio)
+                return;
+            let año;
+            if (fechaInicio.value) {
+                año = new Date(fechaInicio.value + "T00:00:00").getFullYear();
+            } else {
+                año = new Date().getFullYear();
+            }
+
+            fechaInicio.min = `${año}-01-01`;
+            fechaInicio.max = `${año}-12-31`;
+        }
+
+        function configurarFechaFin() {
+            const inicio = document.getElementById("inputFechaIniEst");
+            const fin = document.getElementById("inputFechaFinEst");
+
+            if (!inicio || !fin)
+                return;
+            if (inicio.value === "") {
+
+                fin.min = "";
+                fin.max = "";
+                fin.value = "";
+                return;
+            }
+
+            const fechaInicio = new Date(inicio.value + "T00:00:00");
+            fin.min = inicio.value;
+            const fechaMax = new Date(fechaInicio);
+            fechaMax.setDate(fechaMax.getDate() + 60);
+            const yyyy = fechaMax.getFullYear();
+            const mm = String(fechaMax.getMonth() + 1).padStart(2, "0");
+            const dd = String(fechaMax.getDate()).padStart(2, "0");
+            fin.max = `${yyyy}-${mm}-${dd}`;
+            if (fin.value) {
+                const fechaFin = new Date(fin.value + "T00:00:00");
+                if (fechaFin < fechaInicio || fechaFin > fechaMax) {
+                    fin.value = "";
+                }
+            }
+        }
 
         function calcularDesfase() {
             const panelServidor = document.getElementById('panelDesfaseServidor');
@@ -327,7 +380,7 @@
 
             const diffTime = real.getTime() - est.getTime();
             const diff = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
+             
             // Renderizado de texto puro sin iconos
             if (diff > 0) {
                 panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-atraso';
@@ -344,9 +397,18 @@
             panelDin.classList.remove('d-none');
         }
 
+
         // Event listeners
-        document.getElementById('inputFechaIniEst')?.addEventListener('change', calcularDesfase);
-        document.getElementById('inputFechaFinEst')?.addEventListener('change', calcularDesfase);
+        document.getElementById("inputFechaIniEst")?.addEventListener("change", function () {
+            configurarLimitesFechaInicio();
+            configurarFechaFin();
+            calcularDesfase();
+        });
+
+        document.getElementById("inputFechaFinEst")?.addEventListener("change", function () {
+            configurarFechaFin();
+            calcularDesfase();
+        });
 
         // Inicialización al cargar la página
         window.addEventListener('DOMContentLoaded', calcularDesfase);
