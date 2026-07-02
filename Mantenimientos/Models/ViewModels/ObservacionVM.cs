@@ -41,12 +41,5 @@ namespace Mantenimientos.Models.ViewModels
         [Display(Name = "Observaciones")]
         [DataType(DataType.MultilineText)]
         public string? OBSERVACIONES { get; set; }
-
-        // Filtros que se aplican al retornar al Index
-        public int? FiltroRuta { get; set; }
-        public string? FiltroEmpresa { get; set; }
-        public int? FiltroMes { get; set; }
-        public int? FiltroPeriodo { get; set; }
-        public bool OcultarSinFecha { get; set; }
     }
 }

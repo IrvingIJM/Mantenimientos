@@ -229,13 +229,7 @@
                                     }
                                 </td>
                                 <td class="text-center">
-                                    <a asp-action="Observacion" 
-                                       asp-route-id="@item.ID"
-                                       asp-route-filtroRuta="@Model.FiltroRuta"
-                                       asp-route-filtroEmpresa="@Model.FiltroEmpresa"
-                                       asp-route-filtroMes="@Model.FiltroMes"
-                                       asp-route-filtroPeriodo="@Model.FiltroPeriodo"
-                                       asp-route-ocultarSinFecha="@ViewBag.OcultarSinFecha.ToString()"
+                                    <a href="@Url.Action("Observacion", "Seguimiento", new { id = item.ID })"
                                        class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
                                         <i class="bi bi-pencil me-1"></i>Editar
                                     </a>
