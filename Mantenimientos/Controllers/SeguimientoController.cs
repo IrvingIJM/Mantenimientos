@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace Mantenimientos.Controllers
 {
@@ -29,7 +30,9 @@ namespace Mantenimientos.Controllers
             _logger = logger;
         }
 
-        // GET  /Seguimiento/Index
+        // ══════════════════════════════════════════════════════════════════════
+        // GET /Seguimiento/Index
+        // ══════════════════════════════════════════════════════════════════════
         public async Task<IActionResult> Index(
             int? filtroRuta,
             string? filtroEmpresa,
@@ -37,7 +40,6 @@ namespace Mantenimientos.Controllers
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
         {
-            // Si el usuario no eligió periodo, se usa el actual.
             int periodoActual = await _periodoService.ObtenerPeriodoActualAsync();
             int periodoActivo = filtroPeriodo ?? periodoActual;
 
@@ -48,7 +50,6 @@ namespace Mantenimientos.Controllers
                 filtroMes: filtroMes,
                 ocultarSinFecha: ocultarSinFecha);
 
-            // datos para filtros 
             var listaRutas = await _empDataService.ObtenerRutasAsync();
             var listaPeriodos = await _periodoService.ObtenerPeriodosDisponiblesAsync();
 
@@ -100,7 +101,6 @@ namespace Mantenimientos.Controllers
                     Selected = r == filtroRuta
                 }).ToList(),
 
-                // Solo periodo actual y anterior
                 PeriodosDisponibles = listaPeriodos.Select(p => new SelectListItem
                 {
                     Value = p.Id.ToString(),
@@ -115,7 +115,9 @@ namespace Mantenimientos.Controllers
             return View(viewModel);
         }
 
-        // GET  /Seguimiento/Observacion/{id}
+        // ══════════════════════════════════════════════════════════════════════
+        // GET /Seguimiento/Observacion/{id}
+        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> Observacion(int? id)
         {
@@ -123,15 +125,11 @@ namespace Mantenimientos.Controllers
                 return RedirectToAction(nameof(Index));
 
             var seguimiento = await _context.Seguimientos.FindAsync(id.Value);
-            if (seguimiento == null)
-                return NotFound();
+            if (seguimiento == null) return NotFound();
 
             var sucInfo = await _empDataService.ObtenerInfoSucursalAsync(seguimiento.CLV_SUC);
-
-            // Fechas reales
             var fechasReales = await _empDataService.ObtenerFechasRealesAsync(
-                seguimiento.CLV_SUC,
-                seguimiento.ID_PERIODO);
+                seguimiento.CLV_SUC, seguimiento.ID_PERIODO);
 
             var vm = new ObservacionVM
             {
@@ -155,16 +153,16 @@ namespace Mantenimientos.Controllers
                 FECHA_FIN_RE = fechasReales?.FechaFin,
                 OBSERVACIONES = seguimiento.OBSERVACIONES
             };
-
             return View(vm);
         }
 
+        // ══════════════════════════════════════════════════════════════════════
         // POST /Seguimiento/Observacion
+        // ══════════════════════════════════════════════════════════════════════
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Observacion(ObservacionVM model)
         {
-            // Campos que vienen del servidor, no del form
             ModelState.Remove(nameof(ObservacionVM.SUCURSAL));
             ModelState.Remove(nameof(ObservacionVM.RUTA));
             ModelState.Remove(nameof(ObservacionVM.REGION));
@@ -174,10 +172,8 @@ namespace Mantenimientos.Controllers
 
             if (!ModelState.IsValid)
             {
-                // Recargar datos de solo lectura para volver a mostrar la vista
                 var sucInfo = await _empDataService.ObtenerInfoSucursalAsync(model.CLV_SUC);
                 var fechasReales = await _empDataService.ObtenerFechasRealesAsync(model.CLV_SUC, model.ID_PERIODO);
-
                 model.SUCURSAL = sucInfo?.Nombre ?? model.CLV_SUC;
                 model.RUTA = sucInfo?.RUTA ?? 0;
                 model.REGION = sucInfo?.REGION ?? 0;
@@ -191,7 +187,6 @@ namespace Mantenimientos.Controllers
                 var existente = await _context.Seguimientos.FindAsync(model.ID);
                 if (existente is null) return NotFound();
 
-                // ID_PERIODO no se modifica
                 existente.FECHA_INI_ES = model.FECHA_INI_ES;
                 existente.FECHA_FIN_ES = model.FECHA_FIN_ES;
                 existente.OBSERVACIONES = model.OBSERVACIONES;
@@ -202,18 +197,18 @@ namespace Mantenimientos.Controllers
                 TempData["Mensaje"] = "Registro actualizado con éxito.";
                 TempData["TipoAlerta"] = "success";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error al guardar observación ID={ID}.", model.ID);
                 TempData["Mensaje"] = "Error al guardar. Intente de nuevo.";
                 TempData["TipoAlerta"] = "danger";
             }
-
-            // Retornar al Index con los filtros que se tenían activos
-            return RedirectToAction(nameof(Index),
-                new { filtroPeriodo = model.ID_PERIODO });
+            return RedirectToAction(nameof(Index), new { filtroPeriodo = model.ID_PERIODO });
         }
 
+        // ══════════════════════════════════════════════════════════════════════
         // POST /Seguimiento/Importar
+        // ══════════════════════════════════════════════════════════════════════
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Importar()
@@ -221,7 +216,6 @@ namespace Mantenimientos.Controllers
             try
             {
                 int periodoActual = await _periodoService.ObtenerPeriodoActualAsync();
-
                 const string sql = @"
                     INSERT INTO mttos.dbo.Seguimientos (CLV_SUC, ID_PERIODO)
                     SELECT suc.CLV_SUC, @PeriodoActual
@@ -231,21 +225,23 @@ namespace Mantenimientos.Controllers
                     WHERE s.CLV_SUC = suc.CLV_SUC AND s.ID_PERIODO = @PeriodoActual);";
 
                 int insertados = await _context.Database.ExecuteSqlRawAsync(
-                    sql,
-                    new SqlParameter("@PeriodoActual", periodoActual));
+                    sql, new SqlParameter("@PeriodoActual", periodoActual));
 
                 TempData["Mensaje"] = $"Importación exitosa — {insertados} sucursales agregadas para el Periodo {periodoActual}.";
                 TempData["TipoAlerta"] = "success";
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                TempData["Mensaje"] = "Error al importar sucursales. Revisa los logs.";
+                _logger.LogError(ex, "Error al importar.");
+                TempData["Mensaje"] = "Error al importar sucursales.";
                 TempData["TipoAlerta"] = "danger";
             }
             return RedirectToAction(nameof(Index));
         }
 
-        // GET  /Seguimiento/Exportar
+        // ══════════════════════════════════════════════════════════════════════
+        // GET /Seguimiento/Exportar
+        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> Exportar(
             int? filtroRuta,
@@ -266,31 +262,26 @@ namespace Mantenimientos.Controllers
 
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
-
             hoja.Style.Font.FontName = "Arial";
             hoja.Style.Font.FontSize = 10;
 
-            // Encabezados
             hoja.Cell("C3").Value = "Sucursal"; hoja.Range("C3:C4").Merge();
             hoja.Cell("D3").Value = "Fecha Estimada"; hoja.Range("D3:E3").Merge();
             hoja.Cell("F3").Value = "Fecha Real"; hoja.Range("F3:G3").Merge();
             hoja.Cell("H3").Value = "Días desfasados"; hoja.Range("H3:H4").Merge();
             hoja.Cell("I3").Value = "Observaciones"; hoja.Range("I3:I4").Merge();
-
             hoja.Cell("D4").Value = "Inicio";
             hoja.Cell("E4").Value = "Fin";
             hoja.Cell("F4").Value = "Inicio";
             hoja.Cell("G4").Value = "Fin";
 
             var rango = hoja.Range("C3:I4");
-            rango.Style
-                 .Font.SetBold(true)
+            rango.Style.Font.SetBold(true)
                  .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
                  .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
             rango.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
             rango.Cells().Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
 
-            // Datos
             int fila = 5;
             foreach (var d in datos)
             {
@@ -301,27 +292,167 @@ namespace Mantenimientos.Controllers
                 hoja.Cell(fila, "G").Value = FormatFechaExcel(d.FECHA_FIN_RE);
                 hoja.Cell(fila, "H").Value = d.Dias;
                 hoja.Cell(fila, "I").Value = d.OBSERVACIONES ?? string.Empty;
-
                 hoja.Range(fila, 3, fila, 9).Style
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetInsideBorder(XLBorderStyleValues.Thin);
                 hoja.Range(fila, 4, fila, 8).Style
                     .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
-
                 fila++;
             }
-
             hoja.Columns("C:I").AdjustToContents();
 
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
-            return File(
-                ms.ToArray(),
+            return File(ms.ToArray(),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"Fechas_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
-        // AJAX  GET /Seguimiento/ObtenerSucursalesFiltro?ruta=X
+        // GET /Seguimiento/Descargar
+        [HttpGet]
+        public IActionResult Descargar()
+        {
+            using var workbook = new XLWorkbook();
+            var hoja = workbook.Worksheets.Add("Fechas");
+            hoja.Style.Font.FontName = "Arial";
+            hoja.Style.Font.FontSize = 11;
+
+            // Encabezados
+            hoja.Cell("C3").Value = "Sucursal";
+            hoja.Cell("D3").Value = "Fecha Inicio";
+            hoja.Cell("E3").Value = "Fecha Fin";
+
+            var rango = hoja.Range("C3:E3");
+            rango.Style.Font.SetBold(true)
+                 .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                 .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+            rango.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+            rango.Cells().Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
+
+            using var ms = new MemoryStream();
+            workbook.SaveAs(ms);
+            return File(ms.ToArray(),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Formato.xlsx");
+        }
+
+        // POST /Seguimiento/Cargar
+        [HttpPost]
+        public async Task<IActionResult> Cargar(
+            IFormFile archivo,
+            int? filtroPeriodo)
+        {
+            if (archivo == null || archivo.Length == 0)
+            {
+                TempData["Mensaje"] = "Debes seleccionar un archivo Excel (.xlsx) antes de subir.";
+                TempData["TipoAlerta"] = "warning";
+                return RedirectToAction(nameof(Index), new { filtroPeriodo });
+            }
+
+            var ext = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+            if (ext != ".xlsx" && ext != ".xls")
+            {
+                TempData["Mensaje"] = "El archivo debe ser Excel (.xlsx o .xls).";
+                TempData["TipoAlerta"] = "warning";
+                return RedirectToAction(nameof(Index), new { filtroPeriodo });
+            }
+
+            try
+            {
+                int periodoActual = await _periodoService.ObtenerPeriodoActualAsync();
+                int periodo = filtroPeriodo ?? periodoActual;
+
+                var resultado = new ExcelUpDto();
+
+                using var stream = archivo.OpenReadStream();
+                using var workbook = new XLWorkbook(stream);
+                var hoja = workbook.Worksheets.First();
+
+                int primeraFila = 4;
+                int ultimaFila = hoja.LastRowUsed()?.RowNumber() ?? primeraFila;
+
+                _logger.LogInformation($"Procesando Excel: Primera fila {primeraFila}, Última fila {ultimaFila}, Período {periodo}");
+
+                for (int f = primeraFila; f <= ultimaFila; f++)
+                {
+                    string nombreCelda = hoja.Cell(f, 3).GetString().Trim();
+
+                    if (string.IsNullOrWhiteSpace(nombreCelda))
+                        continue;
+
+                    resultado.TotalFilas++;
+
+                    DateTime? fechaIni = LeerFechaExcel(hoja.Cell(f, 4));
+                    DateTime? fechaFin = LeerFechaExcel(hoja.Cell(f, 5));
+
+                    _logger.LogInformation($"Fila {f}: Sucursal='{nombreCelda}', FechaIni={fechaIni?.ToString("dd/MM/yyyy") ?? "null"}, FechaFin={fechaFin?.ToString("dd/MM/yyyy") ?? "null"}");
+
+                    string? clvSuc = await _empDataService.BuscarClvSucPorNombreAsync(nombreCelda);
+
+                    if (clvSuc == null)
+                    {
+                        resultado.NoEncontrados++;
+                        resultado.NombresNoEncontrados.Add($"'{nombreCelda}' (no encontrada)");
+                        _logger.LogWarning($"Sucursal no encontrada: {nombreCelda}");
+                        continue;
+                    }
+
+                    var seguimiento = await _context.Seguimientos
+                        .FirstOrDefaultAsync(s => s.CLV_SUC == clvSuc && s.ID_PERIODO == periodo);
+
+                    if (seguimiento == null)
+                    {
+                        resultado.NoEncontrados++;
+                        resultado.NombresNoEncontrados.Add($"'{nombreCelda}' (sin registro en período {periodo})");
+                        _logger.LogWarning($"Seguimiento no existe para CLV_SUC={clvSuc}, Período={periodo}");
+                        continue;
+                    }
+
+                    // Solo actualizar si hay al menos una fecha válida
+                    bool tieneAlgunaFecha = fechaIni.HasValue || fechaFin.HasValue;
+                    if (tieneAlgunaFecha)
+                    {
+                        seguimiento.FECHA_INI_ES = fechaIni;
+                        seguimiento.FECHA_FIN_ES = fechaFin;
+                        resultado.Actualizados++;
+                        _logger.LogInformation($"Actualizado: CLV_SUC={clvSuc}, FechaIni={fechaIni?.ToString("dd/MM/yyyy") ?? "null"}, FechaFin={fechaFin?.ToString("dd/MM/yyyy") ?? "null"}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Sin fechas válidas para: {nombreCelda} (CLV_SUC={clvSuc})");
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                // ── Construir mensaje de resultado ────────────────────────────
+                var msg = new System.Text.StringBuilder();
+                msg.Append($"Excel procesado: <strong>{resultado.Actualizados}</strong> ");
+                msg.Append($"de {resultado.TotalFilas} filas actualizadas para el Periodo {periodo}.");
+
+                if (resultado.NombresNoEncontrados.Any())
+                {
+                    msg.Append($" | <strong>{resultado.NoEncontrados} no encontradas:</strong> ");
+                    msg.Append(string.Join(", ", resultado.NombresNoEncontrados.Take(10)));
+                    if (resultado.NombresNoEncontrados.Count > 10)
+                        msg.Append($" … y {resultado.NombresNoEncontrados.Count - 10} más.");
+                }
+
+                TempData["Mensaje"] = msg.ToString();
+                TempData["TipoAlerta"] = resultado.Actualizados > 0 ? "success" : "warning";
+                TempData["EsHtml"] = "true";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al procesar Excel.");
+                TempData["Mensaje"] = $"Error al procesar el archivo: {ex.Message}";
+                TempData["TipoAlerta"] = "danger";
+            }
+
+            return RedirectToAction(nameof(Index), new { filtroPeriodo });
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // AJAX GET /Seguimiento/ObtenerSucursalesFiltro?ruta=X
+        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
         {
@@ -329,8 +460,62 @@ namespace Mantenimientos.Controllers
             return Json(suc.Select(s => new { value = s.CLV_SUC, text = s.Nombre }));
         }
 
-        // Helper
+        // ── Helpers ───────────────────────────────────────────────────────────
         private static string FormatFechaExcel(DateTime? f) =>
             f.HasValue ? f.Value.ToString("dd/MM/yyyy") : string.Empty;
+
+        private static DateTime? LeerFechaExcel(IXLCell celda)
+        {
+            if (celda.IsEmpty()) return null;
+
+            // Si ClosedXML ya la reconoció como fecha
+            try
+            {
+                if (celda.DataType == XLDataType.DateTime)
+                    return celda.GetDateTime();
+            }
+            catch { /* sigue */ }
+
+            // Intentar parsear como texto
+            var texto = celda.GetString().Trim();
+            if (string.IsNullOrEmpty(texto)) return null;
+
+            // Formatos con día de la semana (ej: "lun 23/01/26", "mié 14/04/26")
+            // Intentar primero con formatos que incluyen día de semana
+            var culture = new System.Globalization.CultureInfo("es-ES");
+
+            string[] formatosConDia = {
+                "ddd dd/MM/yy",    // "lun 23/01/26"
+                "ddd dd/MM/yyyy",  // "lun 23/01/2026"
+                "ddd d/M/yy",      // "lun 3/1/26"
+                "ddd d/M/yyyy"     // "lun 3/1/2026"
+            };
+
+            if (DateTime.TryParseExact(texto, formatosConDia, culture,
+                    System.Globalization.DateTimeStyles.None, out var fechaConDia))
+                return fechaConDia;
+
+            // Formatos sin día de semana
+            string[] formatos = { 
+                "dd/MM/yyyy", 
+                "d/M/yyyy", 
+                "yyyy-MM-dd", 
+                "MM/dd/yyyy",
+                "dd/MM/yy",     // por si acaso "23/01/26"
+                "d/M/yy"        // por si acaso "3/1/26"
+            };
+
+            if (DateTime.TryParseExact(texto, formatos,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var fecha))
+                return fecha;
+
+            // Último intento: parseo flexible
+            if (DateTime.TryParse(texto, culture, 
+                    System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var fecha2))
+                return fecha2;
+
+            return null;
+        }
     }
 }

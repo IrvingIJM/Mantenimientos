@@ -125,7 +125,20 @@
                             class="btn btn-outline-secondary fw-semibold px-4">
                         <i class="bi bi-arrow-counterclockwise me-2"></i>Limpiar
                     </button>
-
+                    <div class="ms-md-auto mt-2 mt-md-0">
+                        <button type="button" id="btnDescargar"
+                                class="btn fw-semibold shadow-sm px-4 d-inline-flex align-items-center gap-2"
+                                style="background:#fff; border-color:#333; color:#333;">
+                            <i class="bi bi-file-earmark-excel-fill fs-5"></i>Descargar formato
+                        </button>
+                    </div>
+                    <div class="ms-md-auto mt-2 mt-md-0">
+                        <button type="button" id="btnCargar"
+                                class="btn fw-semibold shadow-sm px-4 d-inline-flex align-items-center gap-2"
+                                style="background:#fff; border-color:#333; color:#333;">
+                            <i class="bi bi-file-earmark-excel-fill fs-5"></i>Subir formato
+                        </button>
+                    </div>
                     <div class="ms-md-auto mt-2 mt-md-0">
                         <button type="button" id="btnExportar"
                                 class="btn fw-semibold shadow-sm px-4 d-inline-flex align-items-center gap-2"
@@ -161,6 +174,7 @@
                             <th class="text-white py-3 text-center">Días de atraso</th>
                             <th class="text-white py-3" style="min-width:180px;">Observaciones</th>
                             <th class="text-white py-3 text-center">Acciones</th>
+                            <th class="text-white py-3 text-center">Reporte</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -234,6 +248,13 @@
                                         <i class="bi bi-pencil me-1"></i>Editar
                                     </a>
                                 </td>
+                                <td class="text-center">
+                                    <a href="192.168.1.5"
+                                    class=" btn btn-sm btn-outline-primary align-content-md-stretch px-3 fw-semibold">
+                                        Reporte
+                                    </a>
+                                    
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -243,22 +264,126 @@
     </div>
 </div>
 
+<!-- Subir archivo de excel -->
+<div class="modal fade" id="modalSubirFormato" tabindex="-1" aria-labelledby="modalSubirFormatoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,auto 0%,#457B9D 100%); color:#fff;">
+                <h5 class="modal-title" id="modalSubirFormatoLabel">
+                    Subir Archivo Excel
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formSubirArchivo" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="archivoExcel" class="form-label fw-bold">Selecciona un archivo Excel</label>
+                        <input type="file" class="form-control" id="archivoExcel" name="archivo" accept=".xlsx,.xls" required>
+                        <small class="form-text text-muted d-block mt-2"></small>
+                    </div>
+                    <input type="hidden" id="filtroPeriodoModal" name="filtroPeriodo">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary fw-semibold" form="formSubirArchivo" id="btnEnviarArchivo">
+                    <i class="bi bi-upload me-2"></i>Subir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
 <script>
-    // URLs generadas por Razor — funcionan en cualquier virtual path de red
+    // URLs generadas por Razor
     const urlExportar = '@Url.Action("Exportar", "Seguimiento")';
     const urlIndex = '@Url.Action("Index", "Seguimiento")';
+    const urlDescargar = '@Url.Action("Descargar", "Seguimiento")';
+    const urlCargar = '@Url.Action("Cargar", "Seguimiento")';
 
     // Tooltips
     document.querySelectorAll('[data-bs-toggle="tooltip"]')
             .forEach(el => new bootstrap.Tooltip(el));
 
-    // Limpiar: vuelve al Index sin filtros (muestra periodo actual por defecto)
+    // vuelve al Index sin filtros (muestra periodo actual por defecto)
     document.getElementById('btnLimpiar').addEventListener('click', () => {
         window.location.href = urlIndex;
     });
 
-    // Exportar — pasa los mismos filtros activos al endpoint de descarga
+    // Descargar formato
+    document.getElementById('btnDescargar').addEventListener('click', () => {
+        const p = new URLSearchParams();
+        window.location.href = urlDescargar + '?' + p.toString();
+    });
+
+    // Cargar formato,abre el modal
+    document.getElementById('btnCargar').addEventListener('click', () => {
+        const periodo = document.getElementById('filtroPeriodo')?.value;
+        document.getElementById('filtroPeriodoModal').value = periodo || '';
+
+        // Abre el modal
+        const modal = new bootstrap.Modal(document.getElementById('modalSubirFormato'));
+        modal.show();
+    });
+
+    // Enviar el formulario de subida
+    document.getElementById('formSubirArchivo').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const archivo = document.getElementById('archivoExcel').files[0];
+        if (!archivo) {
+            alert('Por favor, selecciona un archivo.');
+            return;
+        }
+
+        const btnEnviar = document.getElementById('btnEnviarArchivo');
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Procesando...';
+
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+
+        const periodo = document.getElementById('filtroPeriodoModal').value;
+        console.log('Periodo a enviar:', periodo, 'Tipo:', typeof periodo);
+
+        if (periodo && periodo.trim() !== '') {
+            formData.append('filtroPeriodo', parseInt(periodo));
+        }
+
+        // Debug: mostrar qué se va a enviar
+        console.log('FormData a enviar:');
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ':', pair[1]);
+        }
+
+        try {
+            const response = await fetch(urlCargar, {
+                method: 'POST',
+                body: formData
+            });
+
+            // Leer el contenido de la respuesta
+            const text = await response.text();
+            console.log('Respuesta:', response.status, text);
+
+            if (response.ok || response.status === 302 || response.status === 303) {
+                // 302/303 es redirect (lo normal después de procesar POST)
+                window.location.reload();
+            } else {
+                alert('Error ' + response.status + ' al subir el archivo.\nIntenta con otro archivo o verifica el formato.');
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error al procesar la solicitud: ' + error.message);
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
+        }
+    });
+
+    // Exportar con los mismos filtros activos
     document.getElementById('btnExportar').addEventListener('click', () => {
         const p = new URLSearchParams();
         const ruta = document.getElementById('filtroRuta')?.value;
