@@ -30,9 +30,7 @@ namespace Mantenimientos.Controllers
             _logger = logger;
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // GET /Seguimiento/Index
-        // ══════════════════════════════════════════════════════════════════════
         public async Task<IActionResult> Index(
             int? filtroRuta,
             string? filtroEmpresa,
@@ -115,9 +113,7 @@ namespace Mantenimientos.Controllers
             return View(viewModel);
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // GET /Seguimiento/Observacion/{id}
-        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> Observacion(int? id)
         {
@@ -156,9 +152,7 @@ namespace Mantenimientos.Controllers
             return View(vm);
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // POST /Seguimiento/Observacion
-        // ══════════════════════════════════════════════════════════════════════
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Observacion(ObservacionVM model)
@@ -206,9 +200,7 @@ namespace Mantenimientos.Controllers
             return RedirectToAction(nameof(Index), new { filtroPeriodo = model.ID_PERIODO });
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // POST /Seguimiento/Importar
-        // ══════════════════════════════════════════════════════════════════════
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Importar()
@@ -239,9 +231,7 @@ namespace Mantenimientos.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // GET /Seguimiento/Exportar
-        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> Exportar(
             int? filtroRuta,
@@ -423,7 +413,7 @@ namespace Mantenimientos.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // ── Construir mensaje de resultado ────────────────────────────
+                // Construir mensaje de resultado 
                 var msg = new System.Text.StringBuilder();
                 msg.Append($"Excel procesado: <strong>{resultado.Actualizados}</strong> ");
                 msg.Append($"de {resultado.TotalFilas} filas actualizadas para el Periodo {periodo}.");
@@ -450,9 +440,7 @@ namespace Mantenimientos.Controllers
             return RedirectToAction(nameof(Index), new { filtroPeriodo });
         }
 
-        // ══════════════════════════════════════════════════════════════════════
         // AJAX GET /Seguimiento/ObtenerSucursalesFiltro?ruta=X
-        // ══════════════════════════════════════════════════════════════════════
         [HttpGet]
         public async Task<IActionResult> ObtenerSucursalesFiltro(int ruta)
         {
@@ -460,7 +448,7 @@ namespace Mantenimientos.Controllers
             return Json(suc.Select(s => new { value = s.CLV_SUC, text = s.Nombre }));
         }
 
-        // ── Helpers ───────────────────────────────────────────────────────────
+        // Helpers
         private static string FormatFechaExcel(DateTime? f) =>
             f.HasValue ? f.Value.ToString("dd/MM/yyyy") : string.Empty;
 
@@ -468,41 +456,33 @@ namespace Mantenimientos.Controllers
         {
             if (celda.IsEmpty()) return null;
 
-            // Si ClosedXML ya la reconoció como fecha
-            try
-            {
-                if (celda.DataType == XLDataType.DateTime)
+            if (celda.DataType == XLDataType.DateTime)
                     return celda.GetDateTime();
-            }
-            catch { /* sigue */ }
 
             // Intentar parsear como texto
             var texto = celda.GetString().Trim();
             if (string.IsNullOrEmpty(texto)) return null;
 
-            // Formatos con día de la semana (ej: "lun 23/01/26", "mié 14/04/26")
-            // Intentar primero con formatos que incluyen día de semana
             var culture = new System.Globalization.CultureInfo("es-ES");
 
             string[] formatosConDia = {
-                "ddd dd/MM/yy",    // "lun 23/01/26"
-                "ddd dd/MM/yyyy",  // "lun 23/01/2026"
-                "ddd d/M/yy",      // "lun 3/1/26"
-                "ddd d/M/yyyy"     // "lun 3/1/2026"
+                "ddd dd/MM/yy",
+                "ddd dd/MM/yyyy",
+                "ddd d/M/yy",
+                "ddd d/M/yyyy"
             };
 
             if (DateTime.TryParseExact(texto, formatosConDia, culture,
                     System.Globalization.DateTimeStyles.None, out var fechaConDia))
                 return fechaConDia;
 
-            // Formatos sin día de semana
             string[] formatos = { 
                 "dd/MM/yyyy", 
                 "d/M/yyyy", 
                 "yyyy-MM-dd", 
                 "MM/dd/yyyy",
-                "dd/MM/yy",     // por si acaso "23/01/26"
-                "d/M/yy"        // por si acaso "3/1/26"
+                "dd/MM/yy",
+                "d/M/yy"
             };
 
             if (DateTime.TryParseExact(texto, formatos,
@@ -510,7 +490,6 @@ namespace Mantenimientos.Controllers
                     System.Globalization.DateTimeStyles.None, out var fecha))
                 return fecha;
 
-            // Último intento: parseo flexible
             if (DateTime.TryParse(texto, culture, 
                     System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var fecha2))
                 return fecha2;
