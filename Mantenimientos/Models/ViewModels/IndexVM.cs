@@ -10,7 +10,8 @@ namespace Mantenimientos.Models.ViewModels
         public int PeriodoActual { get; set; }
         public int? FiltroRuta { get; set; }
         public string? FiltroEmpresa { get; set; }
-        public int? FiltroMes { get; set; }
+        public int? FiltroMesInicio { get; set; }
+        public int? FiltroMesFin { get; set; }
 
         public int FiltroPeriodo { get; set; }
 
@@ -18,6 +19,9 @@ namespace Mantenimientos.Models.ViewModels
         public List<SelectListItem> RutasDisponibles { get; set; } = new();
         public List<SelectListItem> MesesDisponibles { get; set; } = new();
         public List<SelectListItem> PeriodosDisponibles { get; set; } = new();
+
+        // URL base del sistema reportes
+        public string ReporteUrl { get; set; } = string.Empty;
     }
 
     public class SeguimientoViewModel

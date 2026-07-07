@@ -17,24 +17,28 @@ namespace Mantenimientos.Controllers
         private readonly EmpDataService _empDataService;
         private readonly PeriodoService _periodoService;
         private readonly ILogger<SeguimientoController> _logger;
+        private readonly IConfiguration _configuration;
 
         public SeguimientoController(
             ApplicationDbContext context,
             EmpDataService empDataService,
             PeriodoService periodoService,
-            ILogger<SeguimientoController> logger)
+            ILogger<SeguimientoController> logger,
+            IConfiguration configuration)
         {
             _context = context;
             _empDataService = empDataService;
             _periodoService = periodoService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         // GET /Seguimiento/Index
         public async Task<IActionResult> Index(
             int? filtroRuta,
             string? filtroEmpresa,
-            int? filtroMes,
+            int? filtroMesInicio,
+            int? filtroMesFin,
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
         {
@@ -45,18 +49,17 @@ namespace Mantenimientos.Controllers
                 periodo: periodoActivo,
                 filtroRuta: filtroRuta,
                 filtroEmpresa: filtroEmpresa,
-                filtroMes: filtroMes,
+                filtroMesInicio: filtroMesInicio,
+                filtroMesFin: filtroMesFin,
                 ocultarSinFecha: ocultarSinFecha);
 
             var listaRutas = await _empDataService.ObtenerRutasAsync();
             var listaPeriodos = await _periodoService.ObtenerPeriodosDisponiblesAsync();
-
             var meses = Enumerable.Range(1, 12)
                 .Select(m => new SelectListItem
                 {
                     Value = m.ToString(),
-                    Text = new DateTime(2000, m, 1).ToString("MMMM"),
-                    Selected = filtroMes.HasValue && filtroMes.Value == m
+                    Text = new DateTime(2000, m, 1).ToString("MMMM")
                 }).ToList();
 
             static string NombreRegion(int id) => id switch
@@ -74,7 +77,9 @@ namespace Mantenimientos.Controllers
                 FiltroPeriodo = periodoActivo,
                 FiltroRuta = filtroRuta,
                 FiltroEmpresa = filtroEmpresa,
-                FiltroMes = filtroMes,
+                FiltroMesInicio = filtroMesInicio,
+                FiltroMesFin = filtroMesFin,
+                ReporteUrl = _configuration["ReporteUrl"] ?? "http://192.168.1.5",
 
                 Seguimientos = datos.Select(d => new SeguimientoViewModel
                 {
@@ -200,6 +205,15 @@ namespace Mantenimientos.Controllers
             return RedirectToAction(nameof(Index), new { filtroPeriodo = model.ID_PERIODO });
         }
 
+        // GET /Seguimiento/Admin
+        [HttpGet]
+        public async Task<IActionResult> Admin()
+        {
+            int periodoActual = await _periodoService.ObtenerPeriodoActualAsync();
+            ViewBag.PeriodoActual = periodoActual;
+            return View();
+        }
+
         // POST /Seguimiento/Importar
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -228,7 +242,7 @@ namespace Mantenimientos.Controllers
                 TempData["Mensaje"] = "Error al importar sucursales.";
                 TempData["TipoAlerta"] = "danger";
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Admin));
         }
 
         // GET /Seguimiento/Exportar
@@ -236,7 +250,8 @@ namespace Mantenimientos.Controllers
         public async Task<IActionResult> Exportar(
             int? filtroRuta,
             string? filtroEmpresa,
-            int? filtroMes,
+            int? filtroMesInicio,
+            int? filtroMesFin,
             int? filtroPeriodo,
             bool ocultarSinFecha = false)
         {
@@ -247,7 +262,8 @@ namespace Mantenimientos.Controllers
                 periodo: periodo,
                 filtroRuta: filtroRuta,
                 filtroEmpresa: filtroEmpresa,
-                filtroMes: filtroMes,
+                filtroMesInicio: filtroMesInicio,
+                filtroMesFin: filtroMesFin,
                 ocultarSinFecha: ocultarSinFecha);
 
             using var workbook = new XLWorkbook();
@@ -307,7 +323,6 @@ namespace Mantenimientos.Controllers
             hoja.Style.Font.FontName = "Arial";
             hoja.Style.Font.FontSize = 11;
 
-            // Encabezados
             hoja.Cell("C3").Value = "Sucursal";
             hoja.Cell("D3").Value = "Fecha Inicio";
             hoja.Cell("E3").Value = "Fecha Fin";
@@ -321,7 +336,7 @@ namespace Mantenimientos.Controllers
 
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
-            return File(ms.ToArray(),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Formato.xlsx");
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Formato.xlsx");
         }
 
         // POST /Seguimiento/Cargar
@@ -413,7 +428,7 @@ namespace Mantenimientos.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // Construir mensaje de resultado 
+                // mensaje de resultado 
                 var msg = new System.Text.StringBuilder();
                 msg.Append($"Excel procesado: <strong>{resultado.Actualizados}</strong> ");
                 msg.Append($"de {resultado.TotalFilas} filas actualizadas para el Periodo {periodo}.");
@@ -457,7 +472,7 @@ namespace Mantenimientos.Controllers
             if (celda.IsEmpty()) return null;
 
             if (celda.DataType == XLDataType.DateTime)
-                    return celda.GetDateTime();
+                return celda.GetDateTime();
 
             // Intentar parsear como texto
             var texto = celda.GetString().Trim();
@@ -476,10 +491,10 @@ namespace Mantenimientos.Controllers
                     System.Globalization.DateTimeStyles.None, out var fechaConDia))
                 return fechaConDia;
 
-            string[] formatos = { 
-                "dd/MM/yyyy", 
-                "d/M/yyyy", 
-                "yyyy-MM-dd", 
+            string[] formatos = {
+                "dd/MM/yyyy",
+                "d/M/yyyy",
+                "yyyy-MM-dd",
                 "MM/dd/yyyy",
                 "dd/MM/yy",
                 "d/M/yy"
@@ -490,7 +505,7 @@ namespace Mantenimientos.Controllers
                     System.Globalization.DateTimeStyles.None, out var fecha))
                 return fecha;
 
-            if (DateTime.TryParse(texto, culture, 
+            if (DateTime.TryParse(texto, culture,
                     System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var fecha2))
                 return fecha2;
 

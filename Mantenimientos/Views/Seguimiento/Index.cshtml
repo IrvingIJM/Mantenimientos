@@ -9,6 +9,14 @@
         (!fecha.HasValue || fecha.Value <= new DateTime(1900, 1, 1))
             ? "—"
             : fecha.Value.ToString("dd/MM/yyyy");
+
+    // Deriva la carpeta del sistema de reportes (BIM/BAR) a partir del prefijo de CLV_SUC.
+    static string? EmpresaReporte(string clvSuc)
+    {
+        if (string.IsNullOrWhiteSpace(clvSuc) || clvSuc.Length < 3) return null;
+        var prefijo = clvSuc.Substring(0, 3).ToUpperInvariant();
+        return (prefijo == "BIM" || prefijo == "BAR") ? prefijo : null;
+    }
 }
 
 <div class="container-fluid py-4 px-3">
@@ -18,6 +26,13 @@
             <h1 class="h3 fw-bold text-black m-0">
                 Seguimiento de Mantenimientos
             </h1>
+        </div>
+        <div class="col-12 col-sm-auto">
+            <a href="@Url.Action("Admin", "Seguimiento")"
+               class="btn fw-semibold shadow-sm px-4 d-inline-flex align-items-center gap-2"
+               style="background:#fff; border-color:#1D3557; color:#1D3557;">
+                <i class="bi bi-gear-fill"></i>Administración
+            </a>
         </div>
     </div>
 
@@ -62,11 +77,11 @@
                             {
                                 <option value="BAR">Barcel</option>
                             }
-                            </select>
+                        </select>
                     </div>
 
                     <!-- Filtro ruta-->
-                    <div class="col-12 col-md-3">
+                    <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Ruta</label>
                         <select name="filtroRuta" id="filtroRuta" class="form-select">
                             <option value="">— Todas —</option>
@@ -76,15 +91,25 @@
                             }
                         </select>
                     </div>
-                    
-                    <!-- Filtro mes -->
-                    <div class="col-12 col-md-3">
-                        <label class="form-label fw-bold text-muted small text-uppercase">Mes</label>
-                        <select name="filtroMes" id="filtroMes" class="form-select">
+
+                    <!-- Filtro mes (rango) -->
+                    <div class="col-12 col-md-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Mes desde</label>
+                        <select name="filtroMesInicio" id="filtroMesInicio" class="form-select">
                             <option value="">— Todos —</option>
                             @foreach (var item in Model.MesesDisponibles)
                             {
-                                <!option value="@item.Value" @(item.Selected ? "selected" : "")>@item.Text</!option>
+                                <!option value="@item.Value" @(Model.FiltroMesInicio.HasValue && Model.FiltroMesInicio.Value.ToString() == item.Value ? "selected" : "")>@item.Text</!option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label fw-bold text-muted small text-uppercase">Mes hasta</label>
+                        <select name="filtroMesFin" id="filtroMesFin" class="form-select">
+                            <option value="">— Todos —</option>
+                            @foreach (var item in Model.MesesDisponibles)
+                            {
+                                <!option value="@item.Value" @(Model.FiltroMesFin.HasValue && Model.FiltroMesFin.Value.ToString() == item.Value ? "selected" : "")>@item.Text</!option>
                             }
                         </select>
                     </div>
@@ -105,7 +130,7 @@
                         <div class="form-check form-switch mt-4 pt-1">
                             <input class="form-check-input" type="checkbox"
                                    name="ocultarSinFecha" id="ocultarSinFecha" value="true"
-                                   @(ViewBag.OcultarSinFecha == true ? "checked" : "")>
+                            @(ViewBag.OcultarSinFecha == true ? "checked" : "")>
                             <label class="form-check-label fw-semibold text-dark" for="ocultarSinFecha">
                                 <i class="bi bi-eye-slash-fill text-warning me-1"></i>Ocultar sin fecha
                             </label>
@@ -181,7 +206,7 @@
                         @if (!Model.Seguimientos.Any())
                         {
                             <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
+                                <td colspan="11" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
                                     <p class="mb-1 fw-bold">Sin registros para el Periodo @Model.FiltroPeriodo</p>
                                     <small>Prueba cambiando filtros.</small>
@@ -249,11 +274,23 @@
                                     </a>
                                 </td>
                                 <td class="text-center">
-                                    <a href="192.168.1.5"
-                                    class=" btn btn-sm btn-outline-primary align-content-md-stretch px-3 fw-semibold">
-                                        Reporte
-                                    </a>
-                                    
+                                    @{
+                                        var empresaReporte = EmpresaReporte(item.CLV_SUC);
+                                    }
+                                    @if (empresaReporte != null)
+                                    {
+                                        var urlReporte = $"{Model.ReporteUrl.TrimEnd('/')}/{empresaReporte}/Observaciones.aspx?clv={Uri.EscapeDataString(item.CLV_SUC)}&p={item.ID_PERIODO}";
+                                        <a href="@urlReporte" target="_blank" rel="noopener"
+                                           class="btn btn-sm btn-outline-primary align-content-md-stretch px-3 fw-semibold">
+                                            Reporte
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary rounded-pill px-3" title="No se pudo determinar la empresa para esta sucursal">
+                                            N/D
+                                        </span>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -295,110 +332,111 @@
 </div>
 
 @section Scripts {
-<script>
-    // URLs generadas por Razor
-    const urlExportar = '@Url.Action("Exportar", "Seguimiento")';
-    const urlIndex = '@Url.Action("Index", "Seguimiento")';
-    const urlDescargar = '@Url.Action("Descargar", "Seguimiento")';
-    const urlCargar = '@Url.Action("Cargar", "Seguimiento")';
+    <script>
+        // URLs generadas por Razor
+        const urlExportar = '@Url.Action("Exportar", "Seguimiento")';
+        const urlIndex = '@Url.Action("Index", "Seguimiento")';
+        const urlDescargar = '@Url.Action("Descargar", "Seguimiento")';
+        const urlCargar = '@Url.Action("Cargar", "Seguimiento")';
 
-    // Tooltips
-    document.querySelectorAll('[data-bs-toggle="tooltip"]')
-            .forEach(el => new bootstrap.Tooltip(el));
+        // Tooltips
+        document.querySelectorAll('[data-bs-toggle="tooltip"]')
+                .forEach(el => new bootstrap.Tooltip(el));
 
-    // vuelve al Index sin filtros (muestra periodo actual por defecto)
-    document.getElementById('btnLimpiar').addEventListener('click', () => {
-        window.location.href = urlIndex;
-    });
+        // vuelve al Index sin filtros (muestra periodo actual por defecto)
+        document.getElementById('btnLimpiar').addEventListener('click', () => {
+            window.location.href = urlIndex;
+        });
 
-    // Descargar formato
-    document.getElementById('btnDescargar').addEventListener('click', () => {
-        const p = new URLSearchParams();
-        window.location.href = urlDescargar + '?' + p.toString();
-    });
+        // Descargar formato
+        document.getElementById('btnDescargar').addEventListener('click', () => {
+            const p = new URLSearchParams();
+            window.location.href = urlDescargar + '?' + p.toString();
+        });
 
-    // Cargar formato,abre el modal
-    document.getElementById('btnCargar').addEventListener('click', () => {
-        const periodo = document.getElementById('filtroPeriodo')?.value;
-        document.getElementById('filtroPeriodoModal').value = periodo || '';
+        // Cargar formato,abre el modal
+        document.getElementById('btnCargar').addEventListener('click', () => {
+            const periodo = document.getElementById('filtroPeriodo')?.value;
+            document.getElementById('filtroPeriodoModal').value = periodo || '';
 
-        // Abre el modal
-        const modal = new bootstrap.Modal(document.getElementById('modalSubirFormato'));
-        modal.show();
-    });
+            // Abre el modal
+            const modal = new bootstrap.Modal(document.getElementById('modalSubirFormato'));
+            modal.show();
+        });
 
-    // Enviar el formulario de subida
-    document.getElementById('formSubirArchivo').addEventListener('submit', async (e) => {
-        e.preventDefault();
+        // Enviar el formulario de subida
+        document.getElementById('formSubirArchivo').addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        const archivo = document.getElementById('archivoExcel').files[0];
-        if (!archivo) {
-            alert('Por favor, selecciona un archivo.');
-            return;
-        }
+            const archivo = document.getElementById('archivoExcel').files[0];
+            if (!archivo) {
+                alert('Por favor, selecciona un archivo.');
+                return;
+            }
 
-        const btnEnviar = document.getElementById('btnEnviarArchivo');
-        btnEnviar.disabled = true;
-        btnEnviar.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Procesando...';
+            const btnEnviar = document.getElementById('btnEnviarArchivo');
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Procesando...';
 
-        const formData = new FormData();
-        formData.append('archivo', archivo);
+            const formData = new FormData();
+            formData.append('archivo', archivo);
 
-        const periodo = document.getElementById('filtroPeriodoModal').value;
-        console.log('Periodo a enviar:', periodo, 'Tipo:', typeof periodo);
+            const periodo = document.getElementById('filtroPeriodoModal').value;
+            console.log('Periodo a enviar:', periodo, 'Tipo:', typeof periodo);
 
-        if (periodo && periodo.trim() !== '') {
-            formData.append('filtroPeriodo', parseInt(periodo));
-        }
+            if (periodo && periodo.trim() !== '') {
+                formData.append('filtroPeriodo', parseInt(periodo));
+            }
 
-        // Debug: mostrar qué se va a enviar
-        console.log('FormData a enviar:');
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ':', pair[1]);
-        }
+            // mostrar qué se va a enviar
+            console.log('FormData a enviar:');
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ':', pair[1]);
+            }
 
-        try {
-            const response = await fetch(urlCargar, {
-                method: 'POST',
-                body: formData
-            });
+            try {
+                const response = await fetch(urlCargar, {
+                    method: 'POST',
+                    body: formData
+                });
 
-            // Leer el contenido de la respuesta
-            const text = await response.text();
-            console.log('Respuesta:', response.status, text);
+                // Leer el contenido de la respuesta
+                const text = await response.text();
+                console.log('Respuesta:', response.status, text);
 
-            if (response.ok || response.status === 302 || response.status === 303) {
-                // 302/303 es redirect (lo normal después de procesar POST)
-                window.location.reload();
-            } else {
-                alert('Error ' + response.status + ' al subir el archivo.\nIntenta con otro archivo o verifica el formato.');
+                if (response.ok || response.status === 302 || response.status === 303) {
+                    window.location.reload();
+                } else {
+                    alert('Error ' + response.status + ' al subir el archivo.\nIntenta con otro archivo o verifica el formato.');
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al procesar la solicitud: ' + error.message);
                 btnEnviar.disabled = false;
                 btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
             }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Error al procesar la solicitud: ' + error.message);
-            btnEnviar.disabled = false;
-            btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
-        }
-    });
+        });
 
-    // Exportar con los mismos filtros activos
-    document.getElementById('btnExportar').addEventListener('click', () => {
-        const p = new URLSearchParams();
-        const ruta = document.getElementById('filtroRuta')?.value;
-        const empresa = document.getElementById('filtroEmpresa')?.value;
-        const mes = document.getElementById('filtroMes')?.value;
-        const periodo = document.getElementById('filtroPeriodo')?.value;
-        const ocultar = document.getElementById('ocultarSinFecha')?.checked;
+        // Exportar con los mismos filtros activos
+        document.getElementById('btnExportar').addEventListener('click', () => {
+            const p = new URLSearchParams();
+            const ruta = document.getElementById('filtroRuta')?.value;
+            const empresa = document.getElementById('filtroEmpresa')?.value;
+            const mesInicio = document.getElementById('filtroMesInicio')?.value;
+            const mesFin = document.getElementById('filtroMesFin')?.value;
+            const periodo = document.getElementById('filtroPeriodo')?.value;
+            const ocultar = document.getElementById('ocultarSinFecha')?.checked;
 
-        if (ruta) p.append('filtroRuta', ruta);
-        if (empresa) p.append('filtroEmpresa', empresa);
-        if (mes) p.append('filtroMes', mes);
-        if (periodo) p.append('filtroPeriodo', periodo);
-        if (ocultar) p.append('ocultarSinFecha', 'true');
+            if (ruta) p.append('filtroRuta', ruta);
+            if (empresa) p.append('filtroEmpresa', empresa);
+            if (mesInicio) p.append('filtroMesInicio', mesInicio);
+            if (mesFin) p.append('filtroMesFin', mesFin);
+            if (periodo) p.append('filtroPeriodo', periodo);
+            if (ocultar) p.append('ocultarSinFecha', 'true');
 
-        window.location.href = urlExportar + '?' + p.toString();
-    });
-</script>
+            window.location.href = urlExportar + '?' + p.toString();
+        });
+    </script>
 }

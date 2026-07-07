@@ -220,7 +220,8 @@ namespace Mantenimientos.Services
             int? filtroRuta = null,
             string? filtroEmpresa = null,
             int? filtroRegion = null,
-            int? filtroMes = null,
+            int? filtroMesInicio = null,
+            int? filtroMesFin = null,
             bool ocultarSinFecha = false)
         {
             var lista = new List<SeguimientoJoinDto>();
@@ -259,10 +260,30 @@ namespace Mantenimientos.Services
                 sql.Append(" AND suc.ID_REG = @Region");
                 cmd.Parameters.AddWithValue("@Region", filtroRegion.Value);
             }
-            if (filtroMes.HasValue)
+            if (filtroMesInicio.HasValue && filtroMesFin.HasValue)
             {
-                sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) = @Mes");
-                cmd.Parameters.AddWithValue("@Mes", filtroMes.Value);
+                // Rango de meses (ej. Enero-Abril). Si el rango "envuelve" el año
+                // (p.ej. Noviembre-Febrero, inicio > fin), se arma con OR en vez de BETWEEN.
+                if (filtroMesInicio.Value <= filtroMesFin.Value)
+                {
+                    sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) BETWEEN @MesIni AND @MesFin");
+                }
+                else
+                {
+                    sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND (MONTH(dbr.F_Inicio) >= @MesIni OR MONTH(dbr.F_Inicio) <= @MesFin)");
+                }
+                cmd.Parameters.AddWithValue("@MesIni", filtroMesInicio.Value);
+                cmd.Parameters.AddWithValue("@MesFin", filtroMesFin.Value);
+            }
+            else if (filtroMesInicio.HasValue)
+            {
+                sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) = @MesIni");
+                cmd.Parameters.AddWithValue("@MesIni", filtroMesInicio.Value);
+            }
+            else if (filtroMesFin.HasValue)
+            {
+                sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) = @MesFin");
+                cmd.Parameters.AddWithValue("@MesFin", filtroMesFin.Value);
             }
             if (ocultarSinFecha)
             {
