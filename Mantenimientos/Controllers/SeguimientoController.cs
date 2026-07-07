@@ -309,9 +309,7 @@ namespace Mantenimientos.Controllers
 
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
-            return File(ms.ToArray(),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Fechas_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
+            return File(ms.ToArray(),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fechas_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
         // GET /Seguimiento/Descargar

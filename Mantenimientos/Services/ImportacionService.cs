@@ -25,8 +25,6 @@ namespace Mantenimientos.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("ImportacionAutomatica: servicio iniciado — intervalo {Min} min.", _intervalo.TotalMinutes);
-
             // Ejecución inicial al arrancar
             await EjecutarImportAsync();
 
@@ -80,8 +78,7 @@ namespace Mantenimientos.Services
             {
                 // Loguear sin romper el ciclo
                 _logger.LogError(ex,
-                    "ImportacionAutomatica: error durante la importación. " +
-                    "Se reintentará en {Min} minutos.", _intervalo.TotalMinutes);
+                    "ImportacionAutomatica: error durante la importación. " + "Se reintentará en {Min} minutos.", _intervalo.TotalMinutes);
             }
         }
     }

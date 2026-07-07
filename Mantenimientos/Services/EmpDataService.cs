@@ -18,15 +18,14 @@ namespace Mantenimientos.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        // ── Rutas disponibles ─────────────────────────────────────────────────
+        // Rutas disponibles
         public async Task<List<int>> ObtenerRutasAsync()
         {
             var lista = new List<int>();
             await using var conn = new SqlConnection(_connectionString);
             await conn.OpenAsync();
             const string sql = @"
-                SELECT DISTINCT suc.RUTA
-                FROM Iker.dbo.Sucursales suc
+                SELECT DISTINCT suc.RUTA FROM Iker.dbo.Sucursales suc
                 INNER JOIN mttos.dbo.Seguimientos s ON s.CLV_SUC = suc.CLV_SUC
                 WHERE suc.ACTIVO = 1 AND suc.RUTA IS NOT NULL
                 ORDER BY suc.RUTA";
@@ -37,7 +36,7 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // ── Sucursales de una ruta ────────────────────────────────────────────
+        // Sucursales de una ruta
         public async Task<List<SucursalDto>> ObtenerSucursalesPorRutaAsync(int ruta)
         {
             var lista = new List<SucursalDto>();
@@ -57,7 +56,7 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // ── Info completa de una sucursal por CLV_SUC ────────────────────────
+        // informacion completa de una sucursal por CLV_SUC
         public async Task<SucursalDto?> ObtenerInfoSucursalAsync(string clvSuc)
         {
             await using var conn = new SqlConnection(_connectionString);
@@ -74,7 +73,7 @@ namespace Mantenimientos.Services
             return null;
         }
 
-        // ── Buscar CLV_SUC por el campo Nombre ─────
+        // Buscar CLV_SUC por el campo Nombre
         public async Task<string?> BuscarClvSucPorNombreAsync(string nombre)
         {
             if (string.IsNullOrWhiteSpace(nombre)) return null;
@@ -84,7 +83,7 @@ namespace Mantenimientos.Services
 
             nombre = nombre.Trim();
 
-            // 1️⃣ Primero intenta coincidencia exacta (ignorando acentos)
+            //Primero intenta buscar una coincidencia excata (sin acentos, sin mayúsculas)
             const string sqlExacto = @"
                     SELECT TOP 1 CLV_SUC
                     FROM Iker.dbo.Sucursales
@@ -95,12 +94,6 @@ namespace Mantenimientos.Services
             cmd.Parameters.AddWithValue("@Nombre", nombre);
             var resultado = await cmd.ExecuteScalarAsync();
 
-            if (resultado != null && resultado != DBNull.Value)
-            {
-                _logger.LogInformation($"✓ Encontrado (coincidencia exacta): {nombre} -> CLV_SUC={resultado}");
-                return resultado.ToString();
-            }
-
             // Divide el nombre en palabras clave
             var palabras = nombre.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
                 .Where(p => p.Length >= 6)
@@ -108,18 +101,16 @@ namespace Mantenimientos.Services
 
             if (palabras.Count == 0)
                 return null;
-
-            // Si hay MÚLTIPLES palabras, busca sucursales que contengan TODAS (o la mayoría)
+            // Si hay multiples palabras, intenta buscar coincidencias con cada una de ellas
             if (palabras.Count >= 6)
             {
-                // Construir una query que busque sucursales con TODAS las palabras
                 var sqlTodasPalabras = @"
                         SELECT TOP 1 CLV_SUC
                         FROM Iker.dbo.Sucursales
                         WHERE ACTIVO = 1 
                         AND ";
 
-                // Agregar condiciones para CADA palabra
+                // Agregar condiciones para cada palabra
                 var condiciones = new List<string>();
                 for (int i = 0; i < palabras.Count; i++)
                 {
@@ -134,15 +125,9 @@ namespace Mantenimientos.Services
                 }
 
                 var resultadoMultiple = await cmdMultiple.ExecuteScalarAsync();
-                if (resultadoMultiple != null && resultadoMultiple != DBNull.Value)
-                {
-                    _logger.LogInformation($"✓ Encontrado (coincide con TODAS las palabras {string.Join(", ", palabras)}): {nombre} -> CLV_SUC={resultadoMultiple}");
-                    return resultadoMultiple.ToString();
-                }
             }
 
-            // Si no encuentra con todas las palabras, intenta con palabras individuales (pero prioritariamente)
-            // Ordenadas por longitud de palabra (palabras más largas = más específicas primero)
+            // palabras más largas = más específicas primero
             var palabrasOrdenadas = palabras.OrderByDescending(p => p.Length).ToList();
 
             foreach (var palabra in palabrasOrdenadas)
@@ -157,15 +142,9 @@ namespace Mantenimientos.Services
                 await using var cmdPalabra = new SqlCommand(sqlPalabra, conn);
                 cmdPalabra.Parameters.AddWithValue("@Palabra", palabra);
                 var resultadoPalabra = await cmdPalabra.ExecuteScalarAsync();
-
-                if (resultadoPalabra != null && resultadoPalabra != DBNull.Value)
-                {
-                    _logger.LogInformation($"✓ Encontrado (por palabra clave '{palabra}'): {nombre} -> CLV_SUC={resultadoPalabra}");
-                    return resultadoPalabra.ToString();
-                }
             }
 
-            // 5️⃣ Última opción: búsqueda parcial del nombre completo
+            // busqueda parcial del nombre completo
             const string sqlLike = @"
                     SELECT TOP 1 CLV_SUC
                     FROM Iker.dbo.Sucursales
@@ -177,17 +156,10 @@ namespace Mantenimientos.Services
             cmd2.Parameters.AddWithValue("@NombreLike", nombre);
             var resultado2 = await cmd2.ExecuteScalarAsync();
 
-            if (resultado2 != null && resultado2 != DBNull.Value)
-            {
-                _logger.LogInformation($"✓ Encontrado (búsqueda parcial): {nombre} -> CLV_SUC={resultado2}");
-                return resultado2.ToString();
-            }
-
-            _logger.LogWarning($"❌ Sucursal no encontrada después de 5 intentos: '{nombre}'");
             return null;
         }
 
-        // ── Fechas reales de DBICET ───────────────────────────────────────────
+        // Fechas reales de DBICET
         public async Task<FechasRealesDto?> ObtenerFechasRealesAsync(string clvSuc, int periodo)
         {
             await using var conn = new SqlConnection(_connectionString);
@@ -214,7 +186,7 @@ namespace Mantenimientos.Services
             return null;
         }
 
-        // ── Consulta principal (JOIN) ─────────────────────────────────────────
+        // Consulta principal
         public async Task<List<SeguimientoJoinDto>> ObtenerSeguimientosAsync(
             int periodo,
             int? filtroRuta = null,
@@ -262,8 +234,7 @@ namespace Mantenimientos.Services
             }
             if (filtroMesInicio.HasValue && filtroMesFin.HasValue)
             {
-                // Rango de meses (ej. Enero-Abril). Si el rango "envuelve" el año
-                // (p.ej. Noviembre-Febrero, inicio > fin), se arma con OR en vez de BETWEEN.
+                // Rango de meses
                 if (filtroMesInicio.Value <= filtroMesFin.Value)
                 {
                     sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) BETWEEN @MesIni AND @MesFin");
@@ -316,7 +287,7 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // ── Helper privado ────────────────────────────────────────────────────
+        // Helper privado
         private static SucursalDto LeerSucursalDto(SqlDataReader r) => new()
         {
             CLV_SUC = r["CLV_SUC"].ToString()!,
@@ -325,13 +296,13 @@ namespace Mantenimientos.Services
             REGION = r.GetByte(r.GetOrdinal("ID_REG"))
         };
 
-        // ─── Normalizar texto: remover acentos y convertir a minúsculas ───────────────
+        // remover acentos y convertir a minuusculas
         private static string NormalizarTexto(string texto)
         {
             if (string.IsNullOrWhiteSpace(texto))
                 return string.Empty;
 
-            // Remover acentos: descompone el texto y elimina combinaciones diacríticas
+            // Remover acentos
             var normalizadoFormD = texto.Normalize(System.Text.NormalizationForm.FormD);
             var resultado = new System.Text.StringBuilder();
 
@@ -350,7 +321,7 @@ namespace Mantenimientos.Services
     }
 }
 
-// ── DTOs ─────────────────────────────────────────────────────────────────────
+// DTOs
 public class SucursalDto
 {
     public string CLV_SUC { get; set; } = string.Empty;

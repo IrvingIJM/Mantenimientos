@@ -10,7 +10,7 @@
             ? "—"
             : fecha.Value.ToString("dd/MM/yyyy");
 
-    // Deriva la carpeta del sistema de reportes (BIM/BAR) a partir del prefijo de CLV_SUC.
+    // sistema de reportes (bimbo/barcel) a partir del prefijo de CLV_SUC.
     static string? EmpresaReporte(string clvSuc)
     {
         if (string.IsNullOrWhiteSpace(clvSuc) || clvSuc.Length < 3) return null;
@@ -301,7 +301,7 @@
     </div>
 </div>
 
-<!-- Subir archivo de excel -->
+<!-- Modal para subir archivo de excel -->
 <div class="modal fade" id="modalSubirFormato" tabindex="-1" aria-labelledby="modalSubirFormatoLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
