@@ -83,26 +83,31 @@ namespace Mantenimientos.Services
 
             nombre = nombre.Trim();
 
-            //Primero intenta buscar una coincidencia excata (sin acentos, sin mayúsculas)
+            // coincidencia exacta, sin acentos ni mayusculas
             const string sqlExacto = @"
                     SELECT TOP 1 CLV_SUC
                     FROM Iker.dbo.Sucursales
                     WHERE LTRIM(RTRIM(Nombre)) COLLATE LATIN1_GENERAL_CI_AI = LTRIM(RTRIM(@Nombre)) COLLATE LATIN1_GENERAL_CI_AI
                     AND ACTIVO = 1";
 
-            await using var cmd = new SqlCommand(sqlExacto, conn);
-            cmd.Parameters.AddWithValue("@Nombre", nombre);
-            var resultado = await cmd.ExecuteScalarAsync();
+            await using (var cmd = new SqlCommand(sqlExacto, conn))
+            {
+                cmd.Parameters.AddWithValue("@Nombre", nombre);
+                var resultadoExacto = await cmd.ExecuteScalarAsync();
+                if (resultadoExacto != null && resultadoExacto != DBNull.Value)
+                    return resultadoExacto.ToString();
+            }
 
-            // Divide el nombre en palabras clave
+            // divide el nombre en palabras clave (se ignoran palabras poco especificas)
             var palabras = nombre.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
-                .Where(p => p.Length >= 6)
+                .Where(p => p.Length >= 4)
                 .ToList();
 
             if (palabras.Count == 0)
                 return null;
-            // Si hay multiples palabras, intenta buscar coincidencias con cada una de ellas
-            if (palabras.Count >= 6)
+
+            // si hay varias palabras, intenta una coincidencia que contenga TODAS las palabras
+            if (palabras.Count >= 2)
             {
                 var sqlTodasPalabras = @"
                         SELECT TOP 1 CLV_SUC
@@ -110,7 +115,6 @@ namespace Mantenimientos.Services
                         WHERE ACTIVO = 1 
                         AND ";
 
-                // Agregar condiciones para cada palabra
                 var condiciones = new List<string>();
                 for (int i = 0; i < palabras.Count; i++)
                 {
@@ -125,9 +129,11 @@ namespace Mantenimientos.Services
                 }
 
                 var resultadoMultiple = await cmdMultiple.ExecuteScalarAsync();
+                if (resultadoMultiple != null && resultadoMultiple != DBNull.Value)
+                    return resultadoMultiple.ToString();
             }
 
-            // palabras más largas = más específicas primero
+            // si no hubo coincidencia con todas las palabras, intenta con la palabra más específica
             var palabrasOrdenadas = palabras.OrderByDescending(p => p.Length).ToList();
 
             foreach (var palabra in palabrasOrdenadas)
@@ -142,9 +148,11 @@ namespace Mantenimientos.Services
                 await using var cmdPalabra = new SqlCommand(sqlPalabra, conn);
                 cmdPalabra.Parameters.AddWithValue("@Palabra", palabra);
                 var resultadoPalabra = await cmdPalabra.ExecuteScalarAsync();
+                if (resultadoPalabra != null && resultadoPalabra != DBNull.Value)
+                    return resultadoPalabra.ToString();
             }
 
-            // busqueda parcial del nombre completo
+            // busqueda parcial del nombre completo tal cual vino en el Excel
             const string sqlLike = @"
                     SELECT TOP 1 CLV_SUC
                     FROM Iker.dbo.Sucursales
@@ -155,6 +163,8 @@ namespace Mantenimientos.Services
             await using var cmd2 = new SqlCommand(sqlLike, conn);
             cmd2.Parameters.AddWithValue("@NombreLike", nombre);
             var resultado2 = await cmd2.ExecuteScalarAsync();
+            if (resultado2 != null && resultado2 != DBNull.Value)
+                return resultado2.ToString();
 
             return null;
         }
