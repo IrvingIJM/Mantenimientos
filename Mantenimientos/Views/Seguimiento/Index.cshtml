@@ -15,7 +15,12 @@
     {
         if (string.IsNullOrWhiteSpace(clvSuc) || clvSuc.Length < 3) return null;
         var prefijo = clvSuc.Substring(0, 3).ToUpperInvariant();
-        return (prefijo == "BIM" || prefijo == "BAR") ? prefijo : null;
+        return prefijo switch
+        {
+            "BIM" => "bimbo",
+            "BAR" => "barcel",
+            _ => null
+        };
     }
 }
 
@@ -305,7 +310,7 @@
 <div class="modal fade" id="modalSubirFormato" tabindex="-1" aria-labelledby="modalSubirFormatoLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header" style="background:linear-gradient(135deg,auto 0%,#457B9D 100%); color:#fff;">
+            <div class="modal-header" style="background:#1D3557; color:#fff;">
                 <h5 class="modal-title" id="modalSubirFormatoLabel">
                     Subir Archivo Excel
                 </h5>
@@ -342,6 +347,32 @@
         // Tooltips
         document.querySelectorAll('[data-bs-toggle="tooltip"]')
                 .forEach(el => new bootstrap.Tooltip(el));
+
+        // Restringe "Mes hasta" para que no se pueda elegir un mes anterior al de "Mes desde"
+        function limitarMesFin() {
+            const selInicio = document.getElementById('filtroMesInicio');
+            const selFin = document.getElementById('filtroMesFin');
+            if (!selInicio || !selFin) return;
+
+            const mesInicio = parseInt(selInicio.value, 10);
+
+            Array.from(selFin.options).forEach(opt => {
+                if (!opt.value) { opt.disabled = false; return; }
+                const mesOpt = parseInt(opt.value, 10);
+                opt.disabled = !isNaN(mesInicio) && mesOpt < mesInicio;
+            });
+
+            // Si el mes fin ya seleccionado quedó inválido con el nuevo mes inicio, se limpia
+            if (!isNaN(mesInicio) && selFin.value) {
+                const mesFinActual = parseInt(selFin.value, 10);
+                if (mesFinActual < mesInicio) {
+                    selFin.value = '';
+                }
+            }
+        }
+
+        document.getElementById('filtroMesInicio')?.addEventListener('change', limitarMesFin);
+        window.addEventListener('DOMContentLoaded', limitarMesFin);
 
         // vuelve al Index sin filtros (muestra periodo actual por defecto)
         document.getElementById('btnLimpiar').addEventListener('click', () => {
