@@ -309,7 +309,7 @@ namespace Mantenimientos.Controllers
 
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
-            return File(ms.ToArray(),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fechas_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
+            return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fechas_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
         }
 
         // GET /Seguimiento/Descargar
@@ -354,6 +354,14 @@ namespace Mantenimientos.Controllers
             if (ext != ".xlsx" && ext != ".xls")
             {
                 TempData["Mensaje"] = "El archivo debe ser Excel (.xlsx o .xls).";
+                TempData["TipoAlerta"] = "warning";
+                return RedirectToAction(nameof(Index), new { filtroPeriodo });
+            }
+
+            // Verificación adicional por contenido real del archivo (además de la extensión)
+            if (!await EsArchivoExcelValidoAsync(archivo))
+            {
+                TempData["Mensaje"] = "El archivo no es un Excel válido. Verifica que no esté dañado ni sea otro tipo de archivo renombrado.";
                 TempData["TipoAlerta"] = "warning";
                 return RedirectToAction(nameof(Index), new { filtroPeriodo });
             }
@@ -462,6 +470,32 @@ namespace Mantenimientos.Controllers
         }
 
         // Helpers
+        private static async Task<bool> EsArchivoExcelValidoAsync(IFormFile archivo)
+        {
+            try
+            {
+                var buffer = new byte[8];
+                await using var stream = archivo.OpenReadStream();
+                int leidos = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length));
+                if (leidos < 4) return false;
+
+                bool esZipXlsx = buffer[0] == 0x50 && buffer[1] == 0x4B;
+                bool esOleXls = buffer[0] == 0xD0 && buffer[1] == 0xCF && buffer[2] == 0x11 && buffer[3] == 0xE0;
+
+                if (!esZipXlsx && !esOleXls)
+                    return false;
+
+                stream.Position = 0;
+                using var workbook = new XLWorkbook(stream);
+                _ = workbook.Worksheets.First();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private static string FormatFechaExcel(DateTime? f) =>
             f.HasValue ? f.Value.ToString("dd/MM/yyyy") : string.Empty;
 
