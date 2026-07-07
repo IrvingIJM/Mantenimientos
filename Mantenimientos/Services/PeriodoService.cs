@@ -27,8 +27,9 @@ namespace Mantenimientos.Services
                 return _cache.Value;
 
             await _lock.WaitAsync();
-
-            // Double-check después de adquirir el lock
+            try
+            {
+                // Double-check después de adquirir el lock
                 if (_cache.HasValue && DateTime.Now < _expiry)
                     return _cache.Value;
 
@@ -38,6 +39,11 @@ namespace Mantenimientos.Services
                 _expiry = DateTime.Now.AddMinutes(30);
 
                 return periodo;
+            }
+            finally
+            {
+                _lock.Release();
+            }
         }
 
         public async Task<List<PeriodoDto>> ObtenerPeriodosDisponiblesAsync()
