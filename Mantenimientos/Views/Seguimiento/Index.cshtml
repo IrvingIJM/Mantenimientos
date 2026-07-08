@@ -394,14 +394,38 @@
             const modal = new bootstrap.Modal(document.getElementById('modalSubirFormato'));
             modal.show();
         });
-
-        // Enviar el formulario de subida
+        
         document.getElementById('formSubirArchivo').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            const inputArchivo = document.getElementById('archivoExcel');
+            const archivo = inputArchivo.files[0];
 
-            const archivo = document.getElementById('archivoExcel').files[0];
+            // Validar que exista un archivo
             if (!archivo) {
                 alert('Por favor, selecciona un archivo.');
+                return;
+            }
+
+            // Validar extensión
+            const extensionesPermitidas = ['xlsx', 'xls'];
+            const extension = archivo.name.split('.').pop().toLowerCase();
+
+            if (!extensionesPermitidas.includes(extension)) {
+                alert('Solo se permiten archivos de Excel (.xlsx o .xls).');
+                inputArchivo.value = '';
+                return;
+            }
+
+            // Validar tipo MIME
+            const tiposPermitidos = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'
+            ];
+
+            if (!tiposPermitidos.includes(archivo.type)) {
+                alert('El archivo seleccionado no es un archivo de Excel válido.');
+                inputArchivo.value = '';
                 return;
             }
 
@@ -413,43 +437,42 @@
             formData.append('archivo', archivo);
 
             const periodo = document.getElementById('filtroPeriodoModal').value;
-            console.log('Periodo a enviar:', periodo, 'Tipo:', typeof periodo);
 
             if (periodo && periodo.trim() !== '') {
                 formData.append('filtroPeriodo', parseInt(periodo));
             }
 
-            // mostrar qué se va a enviar
-            console.log('FormData a enviar:');
-            for (let pair of formData.entries()) {
-                console.log(pair[0] + ':', pair[1]);
-            }
-
             try {
+
                 const response = await fetch(urlCargar, {
                     method: 'POST',
                     body: formData
                 });
 
-                // Leer el contenido de la respuesta
-                const text = await response.text();
-                console.log('Respuesta:', response.status, text);
-
-                if (response.ok || response.status === 302 || response.status === 303) {
-                    window.location.reload();
-                } else {
-                    alert('Error ' + response.status + ' al subir el archivo.\nIntenta con otro archivo o verifica el formato.');
-                    btnEnviar.disabled = false;
-                    btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
                 }
+
+                if (response.ok) {
+                    window.location.reload();
+                    return;
+                }
+
+                alert('Ocurrió un error al subir el archivo.');
+
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error al procesar la solicitud: ' + error.message);
+
+                console.error(error);
+                alert('Error: ' + error.message);
+
+            } finally {
+
                 btnEnviar.disabled = false;
                 btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
+
             }
         });
-
         // Exportar con los mismos filtros activos
         document.getElementById('btnExportar').addEventListener('click', () => {
             const p = new URLSearchParams();

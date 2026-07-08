@@ -339,10 +339,11 @@ namespace Mantenimientos.Controllers
 
         // POST /Seguimiento/Cargar
         [HttpPost]
-        public async Task<IActionResult> Cargar(
-            IFormFile archivo,
-            int? filtroPeriodo)
+        public async Task<IActionResult> Cargar(IFormFile archivo, int? filtroPeriodo)
         {
+            _logger.LogInformation($"Nombre: {archivo.FileName}");
+            _logger.LogInformation($"Extensión: {Path.GetExtension(archivo.FileName)}");
+            _logger.LogInformation($"ContentType: {archivo.ContentType}");
             if (archivo == null || archivo.Length == 0)
             {
                 TempData["Mensaje"] = "Debes seleccionar un archivo Excel (.xlsx) antes de subir.";
@@ -350,10 +351,12 @@ namespace Mantenimientos.Controllers
                 return RedirectToAction(nameof(Index), new { filtroPeriodo });
             }
 
-            var ext = Path.GetExtension(archivo.FileName).ToLowerInvariant();
-            if (ext != ".xlsx" && ext != ".xls")
+            var extension = Path.GetExtension(archivo.FileName);
+
+            if (!string.Equals(extension, ".xlsx", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(extension, ".xls", StringComparison.OrdinalIgnoreCase))
             {
-                TempData["Mensaje"] = "El archivo debe ser Excel (.xlsx o .xls).";
+                TempData["Mensaje"] = "Solo se permiten archivos de Excel.";
                 TempData["TipoAlerta"] = "warning";
                 return RedirectToAction(nameof(Index), new { filtroPeriodo });
             }
