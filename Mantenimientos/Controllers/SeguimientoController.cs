@@ -205,9 +205,9 @@ namespace Mantenimientos.Controllers
             return RedirectToAction(nameof(Index), new { filtroPeriodo = model.ID_PERIODO });
         }
 
-        // GET /Seguimiento/Admin
+        // GET /Seguimiento/admin
         [HttpGet]
-        public async Task<IActionResult> Admin()
+        public async Task<IActionResult> admin()
         {
             int periodoActual = await _periodoService.ObtenerPeriodoActualAsync();
             ViewBag.PeriodoActual = periodoActual;
@@ -242,7 +242,7 @@ namespace Mantenimientos.Controllers
                 TempData["Mensaje"] = "Error al importar sucursales.";
                 TempData["TipoAlerta"] = "danger";
             }
-            return RedirectToAction(nameof(Admin));
+            return RedirectToAction(nameof(admin));
         }
 
         // GET /Seguimiento/Exportar
