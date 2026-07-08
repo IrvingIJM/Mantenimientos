@@ -361,7 +361,7 @@ namespace Mantenimientos.Controllers
                 return RedirectToAction(nameof(Index), new { filtroPeriodo });
             }
 
-            // Verificación adicional por contenido real del archivo (además de la extensión)
+            // Verificación adicional por contenido real del archivo
             if (!await EsArchivoExcelValidoAsync(archivo))
             {
                 TempData["Mensaje"] = "El archivo no es un Excel válido. Verifica que no esté dañado ni sea otro tipo de archivo renombrado.";
@@ -375,6 +375,8 @@ namespace Mantenimientos.Controllers
                 int periodo = filtroPeriodo ?? periodoActual;
 
                 var resultado = new ExcelUpDto();
+
+                var sucursalesActivas = await _empDataService.ObtenerSucursalesActivasAsync();
 
                 using var stream = archivo.OpenReadStream();
                 using var workbook = new XLWorkbook(stream);
@@ -399,15 +401,26 @@ namespace Mantenimientos.Controllers
 
                     _logger.LogInformation($"Fila {f}: Sucursal='{nombreCelda}', FechaIni={fechaIni?.ToString("dd/MM/yyyy") ?? "null"}, FechaFin={fechaFin?.ToString("dd/MM/yyyy") ?? "null"}");
 
-                    string? clvSuc = await _empDataService.BuscarClvSucPorNombreAsync(nombreCelda);
+                    var busqueda = EmpDataService.BuscarSucursalPorNombre(nombreCelda, sucursalesActivas);
 
-                    if (clvSuc == null)
+                    if (busqueda.EsAmbigua)
+                    {
+                        // NO actualizar nada si no se encontraron oincidncias
+                        resultado.Ambiguas++;
+                        resultado.NombresAmbiguos.Add($"'{nombreCelda}' (varias coincidencias parecidas, no se actualizó)");
+                        _logger.LogWarning($"Sucursal ambigua (varias coincidencias parecidas): {nombreCelda}");
+                        continue;
+                    }
+
+                    if (!busqueda.Encontrado)
                     {
                         resultado.NoEncontrados++;
                         resultado.NombresNoEncontrados.Add($"'{nombreCelda}' (no encontrada)");
                         _logger.LogWarning($"Sucursal no encontrada: {nombreCelda}");
                         continue;
                     }
+
+                    string clvSuc = busqueda.ClvSuc!;
 
                     var seguimiento = await _context.Seguimientos
                         .FirstOrDefaultAsync(s => s.CLV_SUC == clvSuc && s.ID_PERIODO == periodo);
@@ -420,7 +433,7 @@ namespace Mantenimientos.Controllers
                         continue;
                     }
 
-                    // Solo actualizar si hay al menos una fecha válida
+                    // Solo actualizar si hay al menos una fecha valida
                     bool tieneAlgunaFecha = fechaIni.HasValue || fechaFin.HasValue;
                     if (tieneAlgunaFecha)
                     {
@@ -441,6 +454,14 @@ namespace Mantenimientos.Controllers
                 var msg = new System.Text.StringBuilder();
                 msg.Append($"Excel procesado: <strong>{resultado.Actualizados}</strong> ");
                 msg.Append($"de {resultado.TotalFilas} filas actualizadas para el Periodo {periodo}.");
+
+                if (resultado.NombresAmbiguos.Any())
+                {
+                    msg.Append($" | <strong>{resultado.Ambiguas} con varias coincidencias (no se actualizaron):</strong> ");
+                    msg.Append(string.Join(", ", resultado.NombresAmbiguos.Take(10)));
+                    if (resultado.NombresAmbiguos.Count > 10)
+                        msg.Append($" … y {resultado.NombresAmbiguos.Count - 10} más.");
+                }
 
                 if (resultado.NombresNoEncontrados.Any())
                 {

@@ -73,100 +73,110 @@ namespace Mantenimientos.Services
             return null;
         }
 
-        // Buscar CLV_SUC por el campo Nombre
-        public async Task<string?> BuscarClvSucPorNombreAsync(string nombre)
+        // carga todas las sucursales activas una sola vez
+        public async Task<List<SucursalDto>> ObtenerSucursalesActivasAsync()
         {
-            if (string.IsNullOrWhiteSpace(nombre)) return null;
-
+            var lista = new List<SucursalDto>();
             await using var conn = new SqlConnection(_connectionString);
             await conn.OpenAsync();
+            const string sql = @"
+                SELECT CLV_SUC, Sucursal, RUTA, ID_REG
+                FROM Iker.dbo.Sucursales
+                WHERE ACTIVO = 1";
+            await using var cmd = new SqlCommand(sql, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+                lista.Add(LeerSucursalDto(reader));
+            return lista;
+        }
 
-            nombre = nombre.Trim();
+        // busca una sucursal por nombre, con varios niveles de tolerancia a errores (mayúsculas/minúsculas, espacios dobles, acentos, etc.)
+        public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
+        {
+            if (string.IsNullOrWhiteSpace(nombreExcel) || sucursales.Count == 0)
+                return ResultadoBusquedaSucursal.NoEncontrada();
 
-            // coincidencia exacta, sin acentos ni mayusculas
-            const string sqlExacto = @"
-                    SELECT TOP 1 CLV_SUC
-                    FROM Iker.dbo.Sucursales
-                    WHERE LTRIM(RTRIM(Nombre)) COLLATE LATIN1_GENERAL_CI_AI = LTRIM(RTRIM(@Nombre)) COLLATE LATIN1_GENERAL_CI_AI
-                    AND ACTIVO = 1";
+            string original = nombreExcel.Trim();
 
-            await using (var cmd = new SqlCommand(sqlExacto, conn))
-            {
-                cmd.Parameters.AddWithValue("@Nombre", nombre);
-                var resultadoExacto = await cmd.ExecuteScalarAsync();
-                if (resultadoExacto != null && resultadoExacto != DBNull.Value)
-                    return resultadoExacto.ToString();
-            }
+            // coincidencia exacta
+            var paso1 = sucursales.Where(s => string.Equals(s.Nombre.Trim(), original, StringComparison.Ordinal)).ToList();
+            if (paso1.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso1[0].CLV_SUC);
+            if (paso1.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
 
-            // divide el nombre en palabras clave (se ignoran palabras poco especificas)
-            var palabras = nombre.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
-                .Where(p => p.Length >= 4)
+            // ignorando mayusculas y minusculas
+            var paso2 = sucursales.Where(s => string.Equals(s.Nombre.Trim(), original, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (paso2.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso2[0].CLV_SUC);
+            if (paso2.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
+
+            // quitando espacios dobles (ademas de mayusculas y minusculas)
+            string sinDobleEspacio = ColapsarEspacios(original);
+            var paso3 = sucursales.Where(s => string.Equals(ColapsarEspacios(s.Nombre), sinDobleEspacio, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (paso3.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso3[0].CLV_SUC);
+            if (paso3.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
+
+            // quitando acentos
+            string normalizado = QuitarAcentos(sinDobleEspacio).ToLowerInvariant();
+            var paso4 = sucursales.Where(s => QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant() == normalizado).ToList();
+            if (paso4.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso4[0].CLV_SUC);
+            if (paso4.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
+
+            // por similitud, solo como Ultimo recurso
+            var normalizadas = sucursales
+                .Select(s => new { s.CLV_SUC, Norm = QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant() })
                 .ToList();
 
-            if (palabras.Count == 0)
-                return null;
+            var candidatos = normalizadas
+                .Where(s => s.Norm.Contains(normalizado) || normalizado.Contains(s.Norm))
+                .Select(s => s.CLV_SUC)
+                .Distinct()
+                .ToList();
 
-            // si hay varias palabras, intenta una coincidencia que contenga TODAS las palabras
-            if (palabras.Count >= 2)
+            if (candidatos.Count == 0)
             {
-                var sqlTodasPalabras = @"
-                        SELECT TOP 1 CLV_SUC
-                        FROM Iker.dbo.Sucursales
-                        WHERE ACTIVO = 1 
-                        AND ";
+                // que aparezcan todas las palabras clave 
+                var palabras = normalizado.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Where(p => p.Length >= 6)
+                    .ToList();
 
-                var condiciones = new List<string>();
-                for (int i = 0; i < palabras.Count; i++)
+                if (palabras.Count > 0)
                 {
-                    condiciones.Add($"Nombre COLLATE LATIN1_GENERAL_CI_AI LIKE CONCAT('%', @Palabra{i} COLLATE LATIN1_GENERAL_CI_AI, '%')");
+                    candidatos = normalizadas
+                        .Where(s => palabras.All(p => s.Norm.Contains(p)))
+                        .Select(s => s.CLV_SUC)
+                        .Distinct()
+                        .ToList();
                 }
-                sqlTodasPalabras += string.Join(" AND ", condiciones) + " ORDER BY LEN(Nombre)";
-
-                await using var cmdMultiple = new SqlCommand(sqlTodasPalabras, conn);
-                for (int i = 0; i < palabras.Count; i++)
-                {
-                    cmdMultiple.Parameters.AddWithValue($"@Palabra{i}", palabras[i]);
-                }
-
-                var resultadoMultiple = await cmdMultiple.ExecuteScalarAsync();
-                if (resultadoMultiple != null && resultadoMultiple != DBNull.Value)
-                    return resultadoMultiple.ToString();
             }
 
-            // si no hubo coincidencia con todas las palabras, intenta con la palabra más específica
-            var palabrasOrdenadas = palabras.OrderByDescending(p => p.Length).ToList();
+            if (candidatos.Count == 1) return ResultadoBusquedaSucursal.Encontrada(candidatos[0]);
+            if (candidatos.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
 
-            foreach (var palabra in palabrasOrdenadas)
+            return ResultadoBusquedaSucursal.NoEncontrada();
+        }
+
+        // Colapsa espacios en blanco repetidos.
+        private static string ColapsarEspacios(string texto) =>
+            string.IsNullOrWhiteSpace(texto)
+                ? string.Empty
+                : System.Text.RegularExpressions.Regex.Replace(texto.Trim(), @"\s+", " ");
+
+        // Quita acentos de un texto
+        private static string QuitarAcentos(string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+                return string.Empty;
+
+            var normalizadoFormD = texto.Normalize(System.Text.NormalizationForm.FormD);
+            var resultado = new System.Text.StringBuilder();
+
+            foreach (char ch in normalizadoFormD)
             {
-                const string sqlPalabra = @"
-                        SELECT TOP 1 CLV_SUC
-                        FROM Iker.dbo.Sucursales
-                        WHERE Nombre COLLATE LATIN1_GENERAL_CI_AI LIKE CONCAT('%', @Palabra COLLATE LATIN1_GENERAL_CI_AI, '%')
-                        AND ACTIVO = 1
-                        ORDER BY LEN(Nombre)";
-
-                await using var cmdPalabra = new SqlCommand(sqlPalabra, conn);
-                cmdPalabra.Parameters.AddWithValue("@Palabra", palabra);
-                var resultadoPalabra = await cmdPalabra.ExecuteScalarAsync();
-                if (resultadoPalabra != null && resultadoPalabra != DBNull.Value)
-                    return resultadoPalabra.ToString();
+                var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
+                if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+                    resultado.Append(ch);
             }
 
-            // busqueda parcial del nombre completo tal cual vino en el Excel
-            const string sqlLike = @"
-                    SELECT TOP 1 CLV_SUC
-                    FROM Iker.dbo.Sucursales
-                    WHERE Nombre COLLATE LATIN1_GENERAL_CI_AI LIKE CONCAT('%', @NombreLike COLLATE LATIN1_GENERAL_CI_AI, '%')
-                    AND ACTIVO = 1
-                    ORDER BY LEN(Nombre)";
-
-            await using var cmd2 = new SqlCommand(sqlLike, conn);
-            cmd2.Parameters.AddWithValue("@NombreLike", nombre);
-            var resultado2 = await cmd2.ExecuteScalarAsync();
-            if (resultado2 != null && resultado2 != DBNull.Value)
-                return resultado2.ToString();
-
-            return null;
+            return resultado.ToString().Normalize(System.Text.NormalizationForm.FormC);
         }
 
         // Fechas reales de DBICET
@@ -271,7 +281,17 @@ namespace Mantenimientos.Services
                 sql.Append(" AND dbr.F_Inicio IS NOT NULL AND dbr.F_Inicio > '1900-01-01'");
             }
 
-            sql.Append(" ORDER BY suc.RUTA, suc.Sucursal");
+            if (filtroMesInicio.HasValue)
+            {
+                // Ordena respetando la secuencia elegida en el filtro de mes (p.ej. abril, mayo, junio),
+                // en vez de ordenar siempre por ruta/sucursal. La fórmula módulo 12 funciona tanto para
+                // rangos normales (abril-junio) como para rangos que cruzan de año (nov-feb).
+                sql.Append(" ORDER BY (MONTH(dbr.F_Inicio) - @MesIni + 12) % 12, suc.RUTA, suc.Sucursal");
+            }
+            else
+            {
+                sql.Append(" ORDER BY suc.RUTA, suc.Sucursal");
+            }
             cmd.CommandText = sql.ToString();
 
             await using var reader = await cmd.ExecuteReaderAsync();
@@ -306,28 +326,6 @@ namespace Mantenimientos.Services
             REGION = r.GetByte(r.GetOrdinal("ID_REG"))
         };
 
-        // remover acentos y convertir a minuusculas
-        private static string NormalizarTexto(string texto)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return string.Empty;
-
-            // Remover acentos
-            var normalizadoFormD = texto.Normalize(System.Text.NormalizationForm.FormD);
-            var resultado = new System.Text.StringBuilder();
-
-            foreach (char ch in normalizadoFormD)
-            {
-                var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
-                if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
-                    resultado.Append(ch);
-            }
-
-            // Convertir a minúsculas
-            return resultado.ToString()
-                .Normalize(System.Text.NormalizationForm.FormC)
-                .ToLowerInvariant();
-        }
     }
 }
 
@@ -371,5 +369,22 @@ public class ExcelUpDto
     public int TotalFilas { get; set; }
     public int Actualizados { get; set; }
     public int NoEncontrados { get; set; }
+    public int Ambiguas { get; set; }
     public List<string> NombresNoEncontrados { get; set; } = new();
+    public List<string> NombresAmbiguos { get; set; } = new();
+}
+
+// Resultado de la búsqueda de una sucursal por nombre.
+// Distingue explícitamente "no encontrada" de "ambigua" (varias coincidencias parecidas),
+// para que el importador nunca actualice la sucursal equivocada por error.
+public class ResultadoBusquedaSucursal
+{
+    public string? ClvSuc { get; private set; }
+    public bool EsAmbigua { get; private set; }
+
+    public bool Encontrado => ClvSuc != null;
+
+    public static ResultadoBusquedaSucursal Encontrada(string clvSuc) => new() { ClvSuc = clvSuc };
+    public static ResultadoBusquedaSucursal Ambigua() => new() { EsAmbigua = true };
+    public static ResultadoBusquedaSucursal NoEncontrada() => new();
 }
