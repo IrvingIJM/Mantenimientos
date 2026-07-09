@@ -28,11 +28,11 @@
     <form asp-action="Observacion" method="post" id="formObservacion" novalidate>
 
         @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="ID" />
+        <input type="hidden" asp-for="ID" /> 
         <input type="hidden" asp-for="CLV_SUC" />
         <input type="hidden" asp-for="ID_PERIODO" />
 
-        <!-- datos de la Sucursal -->
+        <!-- Datos de la Sucursal-->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 d-flex align-items-center gap-2"
                  style="background:linear-gradient(135deg,#1D3557 0%,#457B9D 100%); color:#fff;">
@@ -91,9 +91,9 @@
                                    type="date"
                                    class="form-control"
                                    id="inputFechaIniEst"
+                                   min="2020-01-01" max="2040-12-31"
                                    value="@FormatInput(Model.FECHA_INI_ES)"
                                    onchange="calcularDesfase()" />
-
                         </div>
                     </div>
                     <div class="col-12 col-md-6">
@@ -121,7 +121,6 @@
             </div>
             <div class="card-body">
                 <div class="row g-4">
-
                     <div class="col-12 col-md-6">
                         <label class="form-label fw-semibold text-muted small text-uppercase">
                             Fecha Inicio
@@ -152,9 +151,9 @@
                                    value="@FormatInput(Model.FECHA_FIN_RE)" />
                         </div>
                     </div>
-
                 </div>
 
+                <!-- Panel de Desfase -->
                 @{
                     bool tieneIniEst = Model.FECHA_INI_ES.HasValue && Model.FECHA_INI_ES.Value > new DateTime(1900, 1, 1);
                     bool tieneIniReal = Model.FECHA_INI_RE.HasValue;
@@ -222,6 +221,7 @@
             </div>
         </div>
 
+        <!-- Observaciones -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header py-3 bg-white border-bottom d-flex align-items-center gap-2">
                 <strong>Observaciones</strong>
@@ -290,14 +290,38 @@
     }
 
     <script>
-        const panelDin  = document.getElementById('panelDesfaseDinamico');
-        const textoDin  = document.getElementById('textoDesfaseDinamico');
+        const panelDin = document.getElementById('panelDesfaseDinamico');
+        const textoDin = document.getElementById('textoDesfaseDinamico');
+
+        function validarLimitesEstrictos(input) {
+            if (!input.value) return;
+            
+            const fechaSeleccionada = new Date(input.value + 'T00:00:00');
+            const minFecha = new Date('2020-01-01T00:00:00');
+            const maxFecha = new Date('2040-12-31T00:00:00');
+            
+            if (fechaSeleccionada < minFecha || fechaSeleccionada > maxFecha) {
+                input.value = '';
+                
+                if (typeof calcularDesfase === 'function') {
+                    calcularDesfase();
+                }
+            }
+        }
+
+        // detectar escritura manual no permitida externa al año actual
+        document.getElementById("inputFechaIniEst")?.addEventListener("blur", function() {
+            validarLimitesEstrictos(this);
+        });
+
+        document.getElementById("inputFechaFinEst")?.addEventListener("blur", function() {
+            validarLimitesEstrictos(this);
+        });
         
         function configurarLimitesFechaInicio() {
             const fechaInicio = document.getElementById("inputFechaIniEst");
+            if (!fechaInicio) return;
 
-            if (!fechaInicio)
-                return;
             let año;
             if (fechaInicio.value) {
                 año = new Date(fechaInicio.value + "T00:00:00").getFullYear();
@@ -313,24 +337,27 @@
             const inicio = document.getElementById("inputFechaIniEst");
             const fin = document.getElementById("inputFechaFinEst");
 
-            if (!inicio || !fin)
-                return;
-            if (inicio.value === "") {
+            if (!inicio || !fin) return;
 
-                fin.min = "";
-                fin.max = "";
+            if (inicio.value === "") {
+                fin.min = "2020-01-01";
+                fin.max = "2040-12-31";
                 fin.value = "";
                 return;
             }
 
             const fechaInicio = new Date(inicio.value + "T00:00:00");
             fin.min = inicio.value;
+
             const fechaMax = new Date(fechaInicio);
-            fechaMax.setDate(fechaMax.getDate() + 60);
+            fechaMax.setDate(fechaMax.getDate() + 30);
+            
             const yyyy = fechaMax.getFullYear();
             const mm = String(fechaMax.getMonth() + 1).padStart(2, "0");
             const dd = String(fechaMax.getDate()).padStart(2, "0");
+            
             fin.max = `${yyyy}-${mm}-${dd}`;
+
             if (fin.value) {
                 const fechaFin = new Date(fin.value + "T00:00:00");
                 if (fechaFin < fechaInicio || fechaFin > fechaMax) {
@@ -361,7 +388,7 @@
                 return;
             }
 
-            // Ocultar panel estático
+
             if (panelServidor) {
                 panelServidor.classList.add('d-none');
             }
@@ -381,7 +408,7 @@
             const diffTime = real.getTime() - est.getTime();
             const diff = Math.round(diffTime / (1000 * 60 * 60 * 24));
              
-            // Renderizado de texto puro sin iconos
+            // Renderizado de paneles dinámicos
             if (diff > 0) {
                 panelDin.className = 'mt-3 p-3 rounded-3 d-flex align-items-center gap-3 panel-atraso';
                 textoDin.innerHTML = `${diff} día${diff === 1 ? '' : 's'} de atraso`;
@@ -397,8 +424,7 @@
             panelDin.classList.remove('d-none');
         }
 
-
-        // Event listeners
+        // Event listeners para cambios dinamicos
         document.getElementById("inputFechaIniEst")?.addEventListener("change", function () {
             configurarLimitesFechaInicio();
             configurarFechaFin();
@@ -410,7 +436,11 @@
             calcularDesfase();
         });
 
-        // Inicialización al cargar la página
-        window.addEventListener('DOMContentLoaded', calcularDesfase);
+        // Inicialización al cargar la página por completo
+        window.addEventListener('DOMContentLoaded', () => {
+            configurarLimitesFechaInicio();
+            configurarFechaFin();
+            calcularDesfase();
+        });
     </script>
 }

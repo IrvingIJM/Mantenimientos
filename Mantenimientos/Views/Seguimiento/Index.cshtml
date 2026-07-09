@@ -90,7 +90,7 @@
                         </select>
                     </div>
 
-                    <!-- Filtro mes (rango) -->
+                    <!-- Filtro mes desde y mes hasta -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Mes desde</label>
                         <select name="filtroMesInicio" id="filtroMesInicio" class="form-select">
@@ -134,7 +134,6 @@
                             </label>
                         </div>
                     </div>
-
                 </div>
 
                 <!-- Botones -->
@@ -341,7 +340,8 @@
         document.querySelectorAll('[data-bs-toggle="tooltip"]')
                 .forEach(el => new bootstrap.Tooltip(el));
 
-        // Restringe "Mes hasta" para que no se pueda elegir un mes anterior al de "Mes desde"
+
+        // Restringe "Mes hasta" basándose en "Mes desde"
         function limitarMesFin() {
             const selInicio = document.getElementById('filtroMesInicio');
             const selFin = document.getElementById('filtroMesFin');
@@ -349,14 +349,24 @@
 
             const mesInicio = parseInt(selInicio.value, 10);
 
+            // Si no se ha elegido "Mes desde", deshabilitamos "Mes hasta" y limpiamos su valor
+            if (isNaN(mesInicio) || selInicio.value === '') {
+                selFin.disabled = true;
+                selFin.value = '';
+                return;
+            }
+
+            // Si hay un mes de inicio seleccionado, habilitamos el campo "Mes hasta"
+            selFin.disabled = false;
+
             Array.from(selFin.options).forEach(opt => {
                 if (!opt.value) { opt.disabled = false; return; }
                 const mesOpt = parseInt(opt.value, 10);
-                opt.disabled = !isNaN(mesInicio) && mesOpt < mesInicio;
+                opt.disabled = mesOpt < mesInicio;
             });
 
             // Si el mes fin ya seleccionado quedó inválido con el nuevo mes inicio, se limpia
-            if (!isNaN(mesInicio) && selFin.value) {
+            if (selFin.value) {
                 const mesFinActual = parseInt(selFin.value, 10);
                 if (mesFinActual < mesInicio) {
                     selFin.value = '';
