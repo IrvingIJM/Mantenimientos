@@ -43,7 +43,6 @@
         </div>
     }
 
-    <!-- Filtros -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header py-3"
              style="color:#fff; background:linear-gradient(135deg,#1D3557 0%,#457B9D 100%);">
@@ -53,7 +52,6 @@
             <form asp-action="Index" method="get" id="formFiltros">
                 <div class="row g-3 align-items-end">
 
-                    <!-- Filtro empresa -->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Empresa</label>
                         <select name="filtroEmpresa" id="filtroEmpresa" class="form-select">
@@ -78,7 +76,6 @@
                         </select>
                     </div>
 
-                    <!-- Filtro ruta-->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Ruta</label>
                         <select name="filtroRuta" id="filtroRuta" class="form-select">
@@ -90,7 +87,6 @@
                         </select>
                     </div>
 
-                    <!-- Filtro mes desde y mes hasta -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Mes desde</label>
                         <select name="filtroMesInicio" id="filtroMesInicio" class="form-select">
@@ -112,7 +108,6 @@
                         </select>
                     </div>
 
-                    <!-- Filtro periodo-->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Periodo</label>
                         <select name="filtroPeriodo" id="filtroPeriodo" class="form-select">
@@ -123,7 +118,6 @@
                         </select>
                     </div>
 
-                    <!-- Switch ocultar sin fecha -->
                     <div class="col-12 col-md-3">
                         <div class="form-check form-switch mt-4 pt-1">
                             <input class="form-check-input" type="checkbox"
@@ -136,7 +130,6 @@
                     </div>
                 </div>
 
-                <!-- Botones -->
                 <div class="d-flex gap-2 mt-4 pt-3 border-top flex-wrap align-items-center">
                     <button type="submit" class="btn fw-semibold shadow-sm px-4"
                             style="background:#fff; border-color:#1D3557; color:#1D3557;">
@@ -173,10 +166,9 @@
         </div>
     </div>
 
-    <!-- Tabla -->
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
-            <span class="badge px-3 py-2 rounded-pill fs-6 fw-bold"
+            <span id="contadorRegistrosBadge" class="badge px-3 py-2 rounded-pill fs-6 fw-bold"
                   style="background:#1D3557; color:#fff;">
                 @Model.Seguimientos.Count registros
             </span>
@@ -193,7 +185,55 @@
                             <th class="text-white py-3 text-center">Fecha Fin Estimada</th>
                             <th class="text-white py-3 text-center">Fecha Ini. Real</th>
                             <th class="text-white py-3 text-center">Fecha Fin Real</th>
-                            <th class="text-white py-3 text-center">Días de atraso</th>
+                            
+                            <th class="text-white py-3 text-center position-relative" style="min-width:180px;">
+                                <div class="dropdown d-inline-block">
+                                    <span class="me-1">Días de atraso</span>
+                                    <button class="btn btn-sm p-0 border-0 text-white" type="button" id="dropdownExcelFiltro" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                        <i class="bi bi-filter fs-6"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-dark p-3 shadow" aria-labelledby="dropdownExcelFiltro" style="min-width: 200px; font-size: 0.85rem;">
+
+                                        <li class="mb-1">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioAtraso" value="atraso" onchange="filtrarTablaUnico()">
+                                                <label class="form-check-label" for="radioAtraso">Días atrasados</label>
+                                            </div>
+                                        </li>
+                                        <li class="mb-1">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioAdelanto" value="adelanto" onchange="filtrarTablaUnico()">
+                                                <label class="form-check-label" for="radioAdelanto">Días adelantados</label>
+                                            </div>
+                                        </li>
+                                        <li class="mb-1">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioTiempo" value="tiempo" onchange="filtrarTablaUnico()">
+                                                <label class="form-check-label" for="radioTiempo">En tiempo</label>
+                                            </div>
+                                        </li>
+                                        <li class="mb-1">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioNoIni" value="no-iniciado" onchange="filtrarTablaUnico()">
+                                                <label class="form-check-label" for="radioNoIni">No iniciado</label>
+                                            </div>
+                                        </li>
+                                        <li class="mb-1">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioSinProg" value="sin-programar" onchange="filtrarTablaUnico()">
+                                                <label class="form-check-label" for="radioSinProg">No programado</label>
+                                            </div>
+                                        </li>
+                                        <li>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioProceso" value="en-proceso" onchange="filtrarTablaUnico()">
+                                                <label class="form-check-label" for="radioProceso">En proceso</label>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </th>
+
                             <th class="text-white py-3" style="min-width:180px;">Observaciones</th>
                             <th class="text-white py-3 text-center">Acciones</th>
                             <th class="text-white py-3 text-center">Reporte</th>
@@ -217,10 +257,29 @@
                             var sinFinReal = !item.FECHA_FIN_RE.HasValue;
 
                             int diasDif = 0;
-                            if (!sinFechaEst && !sinFechaRe)
-                                diasDif = (item.FECHA_INI_RE!.Value.Date - item.FECHA_INI_ES!.Value.Date).Days;
+                            string dataEstado = "sin-programar";
 
-                            <tr>
+                            if (sinFechaEst)
+                            {
+                                dataEstado = "sin-programar";
+                            }
+                            else if (sinFechaRe)
+                            {
+                                dataEstado = "no-iniciado";
+                            }
+                            else if (sinFinReal)
+                            {
+                                dataEstado = "en-proceso";
+                            }
+                            else
+                            {
+                                diasDif = (item.FECHA_INI_RE!.Value.Date - item.FECHA_INI_ES!.Value.Date).Days;
+                                if (diasDif > 0) dataEstado = "atraso";
+                                else if (diasDif < 0) dataEstado = "adelanto";
+                                else dataEstado = "tiempo";
+                            }
+
+                            <tr data-estado="@dataEstado" class="mantenimiento-fila">
                                 <td class="ps-3 fw-bold text-primary">@item.RUTA</td>
                                 <td class="text-muted">@item.REGION_NOMBRE</td>
                                 <td class="fw-semibold text-dark">@item.SUCURSAL</td>
@@ -298,7 +357,6 @@
     </div>
 </div>
 
-<!-- Modal para subir archivo de excel -->
 <div class="modal fade" id="modalSubirFormato" tabindex="-1" aria-labelledby="modalSubirFormatoLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -330,18 +388,14 @@
 
 @section Scripts {
     <script>
-        // URLs generadas por Razor
         const urlExportar = '@Url.Action("Exportar", "Seguimiento")';
         const urlIndex = '@Url.Action("Index", "Seguimiento")';
         const urlDescargar = '@Url.Action("Descargar", "Seguimiento")';
         const urlCargar = '@Url.Action("Cargar", "Seguimiento")';
 
-        // Tooltips
         document.querySelectorAll('[data-bs-toggle="tooltip"]')
                 .forEach(el => new bootstrap.Tooltip(el));
 
-
-        // Restringe "Mes hasta" basándose en "Mes desde"
         function limitarMesFin() {
             const selInicio = document.getElementById('filtroMesInicio');
             const selFin = document.getElementById('filtroMesFin');
@@ -349,14 +403,12 @@
 
             const mesInicio = parseInt(selInicio.value, 10);
 
-            // Si no se ha elegido "Mes desde", deshabilitamos "Mes hasta" y limpiamos su valor
             if (isNaN(mesInicio) || selInicio.value === '') {
                 selFin.disabled = true;
                 selFin.value = '';
                 return;
             }
 
-            // Si hay un mes de inicio seleccionado, habilitamos el campo "Mes hasta"
             selFin.disabled = false;
 
             Array.from(selFin.options).forEach(opt => {
@@ -365,7 +417,6 @@
                 opt.disabled = mesOpt < mesInicio;
             });
 
-            // Si el mes fin ya seleccionado quedó inválido con el nuevo mes inicio, se limpia
             if (selFin.value) {
                 const mesFinActual = parseInt(selFin.value, 10);
                 if (mesFinActual < mesInicio) {
@@ -377,40 +428,32 @@
         document.getElementById('filtroMesInicio')?.addEventListener('change', limitarMesFin);
         window.addEventListener('DOMContentLoaded', limitarMesFin);
 
-        // vuelve al Index sin filtros (muestra periodo actual por defecto)
         document.getElementById('btnLimpiar').addEventListener('click', () => {
             window.location.href = urlIndex;
         });
 
-        // Descargar formato
         document.getElementById('btnDescargar').addEventListener('click', () => {
             const p = new URLSearchParams();
             window.location.href = urlDescargar + '?' + p.toString();
         });
 
-        // Cargar formato,abre el modal
         document.getElementById('btnCargar').addEventListener('click', () => {
             const periodo = document.getElementById('filtroPeriodo')?.value;
             document.getElementById('filtroPeriodoModal').value = periodo || '';
-
-            // Abre el modal
             const modal = new bootstrap.Modal(document.getElementById('modalSubirFormato'));
             modal.show();
         });
         
         document.getElementById('formSubirArchivo').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const inputArchivo = document.getElementById('archivoExcel');
             const archivo = inputArchivo.files[0];
 
-            // Validar que exista un archivo
             if (!archivo) {
                 alert('Por favor, selecciona un archivo.');
                 return;
             }
 
-            // Validar extensión
             const extensionesPermitidas = ['xlsx', 'xls'];
             const extension = archivo.name.split('.').pop().toLowerCase();
 
@@ -420,7 +463,6 @@
                 return;
             }
 
-            // Validar tipo MIME
             const tiposPermitidos = [
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'application/vnd.ms-excel'
@@ -440,43 +482,30 @@
             formData.append('archivo', archivo);
 
             const periodo = document.getElementById('filtroPeriodoModal').value;
-
             if (periodo && periodo.trim() !== '') {
                 formData.append('filtroPeriodo', parseInt(periodo));
             }
 
             try {
-
-                const response = await fetch(urlCargar, {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const response = await fetch(urlCargar, { method: 'POST', body: formData });
                 if (response.redirected) {
                     window.location.href = response.url;
                     return;
                 }
-
                 if (response.ok) {
                     window.location.reload();
                     return;
                 }
-
                 alert('Ocurrió un error al subir el archivo.');
-
             } catch (error) {
-
                 console.error(error);
                 alert('Error: ' + error.message);
-
             } finally {
-
                 btnEnviar.disabled = false;
                 btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
-
             }
         });
-        // Exportar con los mismos filtros activos
+
         document.getElementById('btnExportar').addEventListener('click', () => {
             const p = new URLSearchParams();
             const ruta = document.getElementById('filtroRuta')?.value;
@@ -495,5 +524,31 @@
 
             window.location.href = urlExportar + '?' + p.toString();
         });
+
+
+        // NUEVA FUNCIÓN: Filtrado con Radio Buttons (Selección Única)
+        function filtrarTablaUnico() {
+            // Obtenemos el valor del radio button que esté seleccionado actualmente
+            const seleccionado = document.querySelector('input[name="radioEstadoFiltro"]:checked').value;
+            const filas = document.querySelectorAll(".mantenimiento-fila");
+            let contadorVisible = 0;
+
+            filas.forEach(fila => {
+                const estadoFila = fila.getAttribute("data-estado");
+
+                // Si seleccionó "Todos" o el estado de la fila coincide con el radio button seleccionado
+                if (seleccionado === "Todos" || estadoFila === seleccionado) {
+                    fila.style.display = "";
+                    contadorVisible++;
+                } else {
+                    fila.style.display = "none";
+                }
+            });
+
+            const badge = document.getElementById("contadorRegistrosBadge");
+            if (badge) {
+                badge.textContent = `${contadorVisible} registros`;
+            }
+        }
     </script>
 }
