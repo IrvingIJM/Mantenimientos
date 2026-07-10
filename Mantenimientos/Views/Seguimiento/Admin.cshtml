@@ -5,6 +5,7 @@
 
 <div class="container py-4" style="max-width:860px;">
 
+    <!-- Botón de regreso y título  -->
     <div class="d-flex align-items-center mb-4 gap-3">
         <a href="@Url.Action("Index", "Seguimiento")" class="btn btn-outline-secondary btn-sm rounded-circle p-2">
             <i class="bi bi-arrow-left"></i>
@@ -14,6 +15,7 @@
         </div>
     </div>
 
+    <!-- Mensaje de alerta si existe -->
     @if (TempData["Mensaje"] != null)
     {
         var tipo = TempData["TipoAlerta"]?.ToString() ?? "success";
@@ -23,6 +25,7 @@
         </div>
     }
 
+    <!-- Tarjeta de importación de periodo -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header py-3"
              style="color:#fff; background:#1D3557;">
@@ -80,11 +83,13 @@
 
 @section Scripts {
     <script>
+        // Mostrar el modal de confirmación al hacer clic en el botón de cargar periodo
         document.getElementById('btnCargarPeriodo').addEventListener('click', () => {
             const modal = new bootstrap.Modal(document.getElementById('modalConfirmarCarga'));
             modal.show();
         });
 
+        // Deshabilitar el botón de confirmación y mostrar un indicador de carga al enviar el formulario
         document.getElementById('formCargarPeriodo').addEventListener('submit', () => {
             const btn = document.getElementById('btnConfirmarCarga');
             btn.disabled = true;

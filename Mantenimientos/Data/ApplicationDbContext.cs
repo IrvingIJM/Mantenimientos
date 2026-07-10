@@ -26,7 +26,7 @@ namespace Mantenimientos.Data
 
                 entity.Property(e => e.FECHA_FIN_ES).HasColumnType("date");
 
-                entity.Property(e => e.OBSERVACIONES).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.OBSERVACIONES).HasColumnType("nvarchar(400)");
 
                 // sucursal no puede tener dos para el mismo periodo
                 entity.HasIndex(e => new { e.CLV_SUC, e.ID_PERIODO }).HasDatabaseName("IX_Seguimiento_ClvSuc_Periodo").IsUnique();
