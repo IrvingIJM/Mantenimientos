@@ -19,10 +19,7 @@ namespace Mantenimientos.Controllers
         private readonly ILogger<SeguimientoController> _logger;
         private readonly IConfiguration _configuration;
 
-        public SeguimientoController(
-            ApplicationDbContext context,
-            EmpDataService empDataService,
-            PeriodoService periodoService,
+        public SeguimientoController(ApplicationDbContext context, EmpDataService empDataService, PeriodoService periodoService,
             ILogger<SeguimientoController> logger,
             IConfiguration configuration)
         {
@@ -271,6 +268,7 @@ namespace Mantenimientos.Controllers
             hoja.Style.Font.FontName = "Arial";
             hoja.Style.Font.FontSize = 10;
 
+            hoja.Cell("B3").Value = "Ruta"; hoja.Range("B3:B4").Merge();
             hoja.Cell("C3").Value = "Sucursal"; hoja.Range("C3:C4").Merge();
             hoja.Cell("D3").Value = "Fecha Estimada"; hoja.Range("D3:E3").Merge();
             hoja.Cell("F3").Value = "Fecha Real"; hoja.Range("F3:G3").Merge();
@@ -281,7 +279,7 @@ namespace Mantenimientos.Controllers
             hoja.Cell("F4").Value = "Inicio";
             hoja.Cell("G4").Value = "Fin";
 
-            var rango = hoja.Range("C3:I4");
+            var rango = hoja.Range("B3:I4");
             rango.Style.Font.SetBold(true)
                  .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
                  .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
@@ -291,6 +289,7 @@ namespace Mantenimientos.Controllers
             int fila = 5;
             foreach (var d in datos)
             {
+                hoja.Cell(fila, "B").Value = d.RUTA;
                 hoja.Cell(fila, "C").Value = d.SUCURSAL;
                 hoja.Cell(fila, "D").Value = FormatFechaExcel(d.FECHA_INI_ES);
                 hoja.Cell(fila, "E").Value = FormatFechaExcel(d.FECHA_FIN_ES);
@@ -298,14 +297,14 @@ namespace Mantenimientos.Controllers
                 hoja.Cell(fila, "G").Value = FormatFechaExcel(d.FECHA_FIN_RE);
                 hoja.Cell(fila, "H").Value = d.Dias;
                 hoja.Cell(fila, "I").Value = d.OBSERVACIONES ?? string.Empty;
-                hoja.Range(fila, 3, fila, 9).Style
+                hoja.Range(fila, 2, fila, 9).Style
                     .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
                     .Border.SetInsideBorder(XLBorderStyleValues.Thin);
                 hoja.Range(fila, 4, fila, 8).Style
                     .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
                 fila++;
             }
-            hoja.Columns("C:I").AdjustToContents();
+            hoja.Columns("B:I").AdjustToContents();
 
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
@@ -341,9 +340,7 @@ namespace Mantenimientos.Controllers
         [HttpPost]
         public async Task<IActionResult> Cargar(IFormFile archivo, int? filtroPeriodo)
         {
-            _logger.LogInformation($"Nombre: {archivo.FileName}");
-            _logger.LogInformation($"Extensión: {Path.GetExtension(archivo.FileName)}");
-            _logger.LogInformation($"ContentType: {archivo.ContentType}");
+
             if (archivo == null || archivo.Length == 0)
             {
                 TempData["Mensaje"] = "Debes seleccionar un archivo Excel (.xlsx) antes de subir.";
@@ -403,11 +400,11 @@ namespace Mantenimientos.Controllers
 
                     var busqueda = EmpDataService.BuscarSucursalPorNombre(nombreCelda, sucursalesActivas);
 
-                    if (busqueda.EsAmbigua)
+                    if (busqueda.EsImpreciso)
                     {
                         // NO actualizar nada si no se encontraron oincidncias
-                        resultado.Ambiguas++;
-                        resultado.NombresAmbiguos.Add($"'{nombreCelda}' (varias coincidencias parecidas, no se actualizó)");
+                        resultado.Imprecisos++;
+                        resultado.NombresImprecisos.Add($"'{nombreCelda}' (varias coincidencias parecidas, no se actualizó)");
                         _logger.LogWarning($"Sucursal ambigua (varias coincidencias parecidas): {nombreCelda}");
                         continue;
                     }
@@ -455,12 +452,12 @@ namespace Mantenimientos.Controllers
                 msg.Append($"Excel procesado: <strong>{resultado.Actualizados}</strong> ");
                 msg.Append($"de {resultado.TotalFilas} filas actualizadas para el Periodo {periodo}.");
 
-                if (resultado.NombresAmbiguos.Any())
+                if (resultado.NombresImprecisos.Any())
                 {
-                    msg.Append($" | <strong>{resultado.Ambiguas} con varias coincidencias (no se actualizaron):</strong> ");
-                    msg.Append(string.Join(", ", resultado.NombresAmbiguos.Take(10)));
-                    if (resultado.NombresAmbiguos.Count > 10)
-                        msg.Append($" … y {resultado.NombresAmbiguos.Count - 10} más.");
+                    msg.Append($" | <strong>{resultado.Imprecisos} con varias coincidencias (no se actualizaron):</strong> ");
+                    msg.Append(string.Join(", ", resultado.NombresImprecisos.Take(10)));
+                    if (resultado.NombresImprecisos.Count > 10)
+                        msg.Append($" … y {resultado.NombresImprecisos.Count - 10} más.");
                 }
 
                 if (resultado.NombresNoEncontrados.Any())

@@ -98,29 +98,35 @@ namespace Mantenimientos.Services
 
             string original = nombreExcel.Trim();
 
+            // Cambiar parentesis por espacios para evitar problemas de coincidencia exacta
+            original = original.Replace("(", " ").Replace(")", " ");
+
+            // Limpiar espacios extras
+            original = ColapsarEspacios(original);
+
             // coincidencia exacta
             var paso1 = sucursales.Where(s => string.Equals(s.Nombre.Trim(), original, StringComparison.Ordinal)).ToList();
             if (paso1.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso1[0].CLV_SUC);
-            if (paso1.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
+            if (paso1.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
             // ignorando mayusculas y minusculas
             var paso2 = sucursales.Where(s => string.Equals(s.Nombre.Trim(), original, StringComparison.OrdinalIgnoreCase)).ToList();
             if (paso2.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso2[0].CLV_SUC);
-            if (paso2.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
+            if (paso2.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
             // quitando espacios dobles (ademas de mayusculas y minusculas)
             string sinDobleEspacio = ColapsarEspacios(original);
             var paso3 = sucursales.Where(s => string.Equals(ColapsarEspacios(s.Nombre), sinDobleEspacio, StringComparison.OrdinalIgnoreCase)).ToList();
             if (paso3.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso3[0].CLV_SUC);
-            if (paso3.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
+            if (paso3.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
             // quitando acentos
             string normalizado = QuitarAcentos(sinDobleEspacio).ToLowerInvariant();
             var paso4 = sucursales.Where(s => QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant() == normalizado).ToList();
             if (paso4.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso4[0].CLV_SUC);
-            if (paso4.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
+            if (paso4.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
-            // por similitud, solo como Ultimo recurso
+            // por similitud, solo como ultimo recurso
             var normalizadas = sucursales
                 .Select(s => new { s.CLV_SUC, Norm = QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant() })
                 .ToList();
@@ -149,7 +155,7 @@ namespace Mantenimientos.Services
             }
 
             if (candidatos.Count == 1) return ResultadoBusquedaSucursal.Encontrada(candidatos[0]);
-            if (candidatos.Count > 1) return ResultadoBusquedaSucursal.Ambigua();
+            if (candidatos.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
             return ResultadoBusquedaSucursal.NoEncontrada();
         }
@@ -283,9 +289,7 @@ namespace Mantenimientos.Services
 
             if (filtroMesInicio.HasValue)
             {
-                // Ordena respetando la secuencia elegida en el filtro de mes (p.ej. abril, mayo, junio),
-                // en vez de ordenar siempre por ruta/sucursal. La fórmula módulo 12 funciona tanto para
-                // rangos normales (abril-junio) como para rangos que cruzan de año (nov-feb).
+                // Ordena respetando la secuencia elegida en el filtro de mes
                 sql.Append(" ORDER BY (MONTH(dbr.F_Inicio) - @MesIni + 12) % 12, suc.RUTA, suc.Sucursal");
             }
             else
@@ -359,8 +363,8 @@ public class SeguimientoJoinDto
     public string? OBSERVACIONES { get; set; }
 
     public int? Dias =>
-        (FECHA_FIN_RE.HasValue && FECHA_FIN_ES.HasValue)
-            ? (int?)(FECHA_FIN_RE.Value.Date - FECHA_FIN_ES.Value.Date).Days
+        (FECHA_INI_RE.HasValue && FECHA_INI_ES.HasValue)
+            ? (int?)(FECHA_INI_RE.Value.Date - FECHA_INI_ES.Value.Date).Days
             : null;
 }
 
@@ -369,22 +373,20 @@ public class ExcelUpDto
     public int TotalFilas { get; set; }
     public int Actualizados { get; set; }
     public int NoEncontrados { get; set; }
-    public int Ambiguas { get; set; }
+    public int Imprecisos { get; set; }
     public List<string> NombresNoEncontrados { get; set; } = new();
-    public List<string> NombresAmbiguos { get; set; } = new();
+    public List<string> NombresImprecisos { get; set; } = new();
 }
 
-// Resultado de la búsqueda de una sucursal por nombre.
-// Distingue explícitamente "no encontrada" de "ambigua" (varias coincidencias parecidas),
-// para que el importador nunca actualice la sucursal equivocada por error.
+// Resultado de la búsqueda de una sucursal por nombre
 public class ResultadoBusquedaSucursal
 {
     public string? ClvSuc { get; private set; }
-    public bool EsAmbigua { get; private set; }
+    public bool EsImpreciso { get; private set; }
 
     public bool Encontrado => ClvSuc != null;
 
     public static ResultadoBusquedaSucursal Encontrada(string clvSuc) => new() { ClvSuc = clvSuc };
-    public static ResultadoBusquedaSucursal Ambigua() => new() { EsAmbigua = true };
+    public static ResultadoBusquedaSucursal Impreciso() => new() { EsImpreciso = true };
     public static ResultadoBusquedaSucursal NoEncontrada() => new();
 }

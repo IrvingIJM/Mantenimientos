@@ -43,6 +43,7 @@
         </div>
     }
 
+    <!-- Filtros -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header py-3"
              style="color:#fff; background:linear-gradient(135deg,#1D3557 0%,#457B9D 100%);">
@@ -52,6 +53,7 @@
             <form asp-action="Index" method="get" id="formFiltros">
                 <div class="row g-3 align-items-end">
 
+                    <!-- Filtro Empresa -->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Empresa</label>
                         <select name="filtroEmpresa" id="filtroEmpresa" class="form-select">
@@ -76,6 +78,7 @@
                         </select>
                     </div>
 
+                    <!-- Filtro Ruta -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Ruta</label>
                         <select name="filtroRuta" id="filtroRuta" class="form-select">
@@ -87,6 +90,7 @@
                         </select>
                     </div>
 
+                    <!--Filtro meses -->
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Mes desde</label>
                         <select name="filtroMesInicio" id="filtroMesInicio" class="form-select">
@@ -97,6 +101,7 @@
                             }
                         </select>
                     </div>
+
                     <div class="col-12 col-md-2">
                         <label class="form-label fw-bold text-muted small text-uppercase">Mes hasta</label>
                         <select name="filtroMesFin" id="filtroMesFin" class="form-select">
@@ -108,6 +113,7 @@
                         </select>
                     </div>
 
+                    <!--Filtro periodo-->
                     <div class="col-12 col-md-3">
                         <label class="form-label fw-bold text-muted small text-uppercase">Periodo</label>
                         <select name="filtroPeriodo" id="filtroPeriodo" class="form-select">
@@ -118,6 +124,7 @@
                         </select>
                     </div>
 
+                    <!--Filtro ocultar-->
                     <div class="col-12 col-md-3">
                         <div class="form-check form-switch mt-4 pt-1">
                             <input class="form-check-input" type="checkbox"
@@ -130,6 +137,7 @@
                     </div>
                 </div>
 
+                <!--Botones-->
                 <div class="d-flex gap-2 mt-4 pt-3 border-top flex-wrap align-items-center">
                     <button type="submit" class="btn fw-semibold shadow-sm px-4"
                             style="background:#fff; border-color:#1D3557; color:#1D3557;">
@@ -173,8 +181,10 @@
                 @Model.Seguimientos.Count registros
             </span>
         </div>
+
+        <!--Tabla -->
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive overflow-visible">
                 <table class="table table-striped table-hover align-middle mb-0">
                     <thead class="table-dark text-uppercase fs-7">
                         <tr style="font-size:0.78rem; letter-spacing:0.5px;">
@@ -190,9 +200,16 @@
                                 <div class="dropdown d-inline-block">
                                     <span class="me-1">Días de atraso</span>
                                     <button class="btn btn-sm p-0 border-0 text-white" type="button" id="dropdownExcelFiltro" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-                                        <i class="bi bi-filter fs-6"></i>
+                                        <i class="bi bi-funnel fs-6"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-dark p-3 shadow" aria-labelledby="dropdownExcelFiltro" style="min-width: 200px; font-size: 0.85rem;">
+                                        
+                                        <li class="mb-2 pb-2 border-bottom border-secondary">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioTodo" value="Todos" checked onchange="filtrarTablaUnico()">
+                                                <label class="form-check-label fw-bold" for="radioTodo">Mostrar Todos</label>
+                                            </div>
+                                        </li>
 
                                         <li class="mb-1">
                                             <div class="form-check">
@@ -357,6 +374,7 @@
     </div>
 </div>
 
+<!--Modal para subir archivo Excel -->
 <div class="modal fade" id="modalSubirFormato" tabindex="-1" aria-labelledby="modalSubirFormatoLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -388,6 +406,7 @@
 
 @section Scripts {
     <script>
+        // Variables de URL para acciones
         const urlExportar = '@Url.Action("Exportar", "Seguimiento")';
         const urlIndex = '@Url.Action("Index", "Seguimiento")';
         const urlDescargar = '@Url.Action("Descargar", "Seguimiento")';
@@ -396,6 +415,7 @@
         document.querySelectorAll('[data-bs-toggle="tooltip"]')
                 .forEach(el => new bootstrap.Tooltip(el));
 
+        // Limitar opciones de mes fin según mes inicio
         function limitarMesFin() {
             const selInicio = document.getElementById('filtroMesInicio');
             const selFin = document.getElementById('filtroMesFin');
@@ -425,6 +445,7 @@
             }
         }
 
+        // Inicializar el estado de mes fin al cargar la página
         document.getElementById('filtroMesInicio')?.addEventListener('change', limitarMesFin);
         window.addEventListener('DOMContentLoaded', limitarMesFin);
 
@@ -432,11 +453,13 @@
             window.location.href = urlIndex;
         });
 
+        // Descargar formato
         document.getElementById('btnDescargar').addEventListener('click', () => {
             const p = new URLSearchParams();
             window.location.href = urlDescargar + '?' + p.toString();
         });
 
+        // Subir formato
         document.getElementById('btnCargar').addEventListener('click', () => {
             const periodo = document.getElementById('filtroPeriodo')?.value;
             document.getElementById('filtroPeriodoModal').value = periodo || '';
@@ -444,6 +467,7 @@
             modal.show();
         });
         
+        // Manejo del envío del formulario de subir archivo
         document.getElementById('formSubirArchivo').addEventListener('submit', async (e) => {
             e.preventDefault();
             const inputArchivo = document.getElementById('archivoExcel');
@@ -506,6 +530,7 @@
             }
         });
 
+        // Exportar a Excel con filtros
         document.getElementById('btnExportar').addEventListener('click', () => {
             const p = new URLSearchParams();
             const ruta = document.getElementById('filtroRuta')?.value;
@@ -526,9 +551,8 @@
         });
 
 
-        // NUEVA FUNCIÓN: Filtrado con Radio Buttons (Selección Única)
+        // Filtrado con Radio Buttons
         function filtrarTablaUnico() {
-            // Obtenemos el valor del radio button que esté seleccionado actualmente
             const seleccionado = document.querySelector('input[name="radioEstadoFiltro"]:checked').value;
             const filas = document.querySelectorAll(".mantenimiento-fila");
             let contadorVisible = 0;
@@ -536,7 +560,6 @@
             filas.forEach(fila => {
                 const estadoFila = fila.getAttribute("data-estado");
 
-                // Si seleccionó "Todos" o el estado de la fila coincide con el radio button seleccionado
                 if (seleccionado === "Todos" || estadoFila === seleccionado) {
                     fila.style.display = "";
                     contadorVisible++;
