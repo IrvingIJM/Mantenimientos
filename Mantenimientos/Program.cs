@@ -20,7 +20,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //Servicios de la base de datos
 builder.Services.AddScoped<EmpDataService>();
 builder.Services.AddScoped<PeriodoService>();
-builder.Services.AddHostedService<ImportacionAutomaticaService>();
 
 //Logging
 builder.Services.AddLogging();
