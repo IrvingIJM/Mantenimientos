@@ -110,7 +110,7 @@ namespace Mantenimientos.Services
             if (exactas.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
             // ignorar palablas para comparar solamntee el nombre
-            string[] palabrasIgnorar = { "sucursal", "bimbo", "barcel", "agencia", "ceve" };
+            string[] palabrasIgnorar = { "intermedio", "bimbo", "ceve", "." };
 
             string ObtenerCondicion(string texto)
             {
