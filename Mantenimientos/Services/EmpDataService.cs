@@ -107,7 +107,7 @@ namespace Mantenimientos.Services
             // coincidencia exacta
             var exactas = sucursales.Where(s => QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant() == normalizadoExcel).ToList();
             if (exactas.Count == 1) return ResultadoBusquedaSucursal.Encontrada(exactas[0].CLV_SUC);
-            if (exactas.Count > 1) return ResultadoBusquedaSucursal.Imprecisa();
+            if (exactas.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
             // ignorar palablas para comparar solamntee el nombre
             string[] palabrasIgnorar = { "sucursal", "bimbo", "barcel", "agencia", "ceve" };
@@ -130,7 +130,7 @@ namespace Mantenimientos.Services
                     .ToList();
 
                 if (candidatos.Count == 1) return ResultadoBusquedaSucursal.Encontrada(candidatos[0].CLV_SUC);
-                if (candidatos.Count > 1) return ResultadoBusquedaSucursal.Imprecisa();
+                if (candidatos.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
                 var palabrasExcel = condicionExcel.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
 
@@ -144,7 +144,7 @@ namespace Mantenimientos.Services
                     .ToList();
 
                 if (candidatasSimilares.Count == 1) return ResultadoBusquedaSucursal.Encontrada(candidatasSimilares[0].CLV_SUC);
-                if (candidatasSimilares.Count > 1) return ResultadoBusquedaSucursal.Imprecisa();
+                if (candidatasSimilares.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
             }
 
             return ResultadoBusquedaSucursal.NoEncontrada();
@@ -361,20 +361,23 @@ public class ExcelUpDto
     public int TotalFilas { get; set; }
     public int Actualizados { get; set; }
     public int NoEncontrados { get; set; }
-    public int Ambiguas { get; set; }
+
+    public int Imprecisos { get; set; }
     public List<string> NombresNoEncontrados { get; set; } = new();
-    public List<string> NombresAmbiguos { get; set; } = new();
+
+    public List<string> NombresImprecisos { get; set; } = new();
 }
 
-// Resultado de la búsqueda de una sucursal por nombre
 public class ResultadoBusquedaSucursal
 {
     public string? ClvSuc { get; private set; }
-    public bool EsAmbigua { get; private set; }
+
+    public bool EsImpreciso { get; private set; }
 
     public bool Encontrado => ClvSuc != null;
 
     public static ResultadoBusquedaSucursal Encontrada(string clvSuc) => new() { ClvSuc = clvSuc };
-    public static ResultadoBusquedaSucursal Imprecisa() => new() { EsAmbigua = true };
+
+    public static ResultadoBusquedaSucursal Impreciso() => new() { EsImpreciso = true };
     public static ResultadoBusquedaSucursal NoEncontrada() => new();
 }
