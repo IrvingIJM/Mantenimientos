@@ -90,72 +90,62 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // busca una sucursal por nombre, con varios niveles de tolerancia a errores (mayúsculas/minúsculas, espacios dobles, acentos, etc.)
+        // busca una sucursal por nombre, con alta precisión usando extracción de "esencia" e intersección de palabras clave
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
             if (string.IsNullOrWhiteSpace(nombreExcel) || sucursales.Count == 0)
                 return ResultadoBusquedaSucursal.NoEncontrada();
 
+            // normalizacion 
             string original = nombreExcel.Trim();
+            original = original.Replace("Sucusal", "Sucursal", StringComparison.OrdinalIgnoreCase);
+            original = original.Replace("(", " ").Replace(")", " ").Replace("-", " ");
 
-            // Cambiar parentesis por espacios para evitar problemas de coincidencia exacta
-            original = original.Replace("(", " ").Replace(")", " ");
-
-            // Limpiar espacios extras
-            original = ColapsarEspacios(original);
+            string sinDobleEspacio = ColapsarEspacios(original);
+            string normalizadoExcel = QuitarAcentos(sinDobleEspacio).ToLowerInvariant();
 
             // coincidencia exacta
-            var paso1 = sucursales.Where(s => string.Equals(s.Nombre.Trim(), original, StringComparison.Ordinal)).ToList();
-            if (paso1.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso1[0].CLV_SUC);
-            if (paso1.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
+            var exactas = sucursales.Where(s => QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant() == normalizadoExcel).ToList();
+            if (exactas.Count == 1) return ResultadoBusquedaSucursal.Encontrada(exactas[0].CLV_SUC);
+            if (exactas.Count > 1) return ResultadoBusquedaSucursal.Imprecisa();
 
-            // ignorando mayusculas y minusculas
-            var paso2 = sucursales.Where(s => string.Equals(s.Nombre.Trim(), original, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (paso2.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso2[0].CLV_SUC);
-            if (paso2.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
+            // ignorar palablas para comparar solamntee el nombre
+            string[] palabrasIgnorar = { "sucursal", "bimbo", "barcel", "agencia", "ceve" };
 
-            // quitando espacios dobles (ademas de mayusculas y minusculas)
-            string sinDobleEspacio = ColapsarEspacios(original);
-            var paso3 = sucursales.Where(s => string.Equals(ColapsarEspacios(s.Nombre), sinDobleEspacio, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (paso3.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso3[0].CLV_SUC);
-            if (paso3.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
-
-            // quitando acentos
-            string normalizado = QuitarAcentos(sinDobleEspacio).ToLowerInvariant();
-            var paso4 = sucursales.Where(s => QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant() == normalizado).ToList();
-            if (paso4.Count == 1) return ResultadoBusquedaSucursal.Encontrada(paso4[0].CLV_SUC);
-            if (paso4.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
-
-            // por similitud, solo como ultimo recurso
-            var normalizadas = sucursales
-                .Select(s => new { s.CLV_SUC, Norm = QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant() })
-                .ToList();
-
-            var candidatos = normalizadas
-                .Where(s => s.Norm.Contains(normalizado) || normalizado.Contains(s.Norm))
-                .Select(s => s.CLV_SUC)
-                .Distinct()
-                .ToList();
-
-            if (candidatos.Count == 0)
+            string ObtenerCondicion(string texto)
             {
-                // que aparezcan todas las palabras clave 
-                var palabras = normalizado.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Where(p => p.Length >= 6)
-                    .ToList();
-
-                if (palabras.Count > 0)
-                {
-                    candidatos = normalizadas
-                        .Where(s => palabras.All(p => s.Norm.Contains(p)))
-                        .Select(s => s.CLV_SUC)
-                        .Distinct()
-                        .ToList();
-                }
+                var palabras = texto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var palabrasUtiles = palabras.Where(p => !palabrasIgnorar.Contains(p)).OrderBy(p => p);
+                return string.Join(" ", palabrasUtiles);
             }
 
-            if (candidatos.Count == 1) return ResultadoBusquedaSucursal.Encontrada(candidatos[0]);
-            if (candidatos.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
+            string condicionExcel = ObtenerCondicion(normalizadoExcel);
+
+            if (!string.IsNullOrWhiteSpace(condicionExcel))
+            {
+                // busqueda por condicion exacta
+                var candidatos = sucursales
+                    .Select(s => new { s.CLV_SUC, Esencia = ObtenerCondicion(QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant()) })
+                    .Where(s => s.Esencia == condicionExcel)
+                    .ToList();
+
+                if (candidatos.Count == 1) return ResultadoBusquedaSucursal.Encontrada(candidatos[0].CLV_SUC);
+                if (candidatos.Count > 1) return ResultadoBusquedaSucursal.Imprecisa();
+
+                var palabrasExcel = condicionExcel.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+                var candidatasSimilares = sucursales
+                    .Select(s => new
+                    {
+                        s.CLV_SUC,
+                        PalabrasBD = ObtenerCondicion(QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant()).Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList()
+                    })
+                    .Where(s => s.PalabrasBD.Any() && palabrasExcel.Intersect(s.PalabrasBD).Count() == palabrasExcel.Count)
+                    .ToList();
+
+                if (candidatasSimilares.Count == 1) return ResultadoBusquedaSucursal.Encontrada(candidatasSimilares[0].CLV_SUC);
+                if (candidatasSimilares.Count > 1) return ResultadoBusquedaSucursal.Imprecisa();
+            }
 
             return ResultadoBusquedaSucursal.NoEncontrada();
         }
@@ -260,7 +250,6 @@ namespace Mantenimientos.Services
             }
             if (filtroMesInicio.HasValue && filtroMesFin.HasValue)
             {
-                // Rango de meses
                 if (filtroMesInicio.Value <= filtroMesFin.Value)
                 {
                     sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) BETWEEN @MesIni AND @MesFin");
@@ -289,7 +278,6 @@ namespace Mantenimientos.Services
 
             if (filtroMesInicio.HasValue)
             {
-                // Ordena respetando la secuencia elegida en el filtro de mes
                 sql.Append(" ORDER BY (MONTH(dbr.F_Inicio) - @MesIni + 12) % 12, suc.RUTA, suc.Sucursal");
             }
             else
@@ -373,20 +361,20 @@ public class ExcelUpDto
     public int TotalFilas { get; set; }
     public int Actualizados { get; set; }
     public int NoEncontrados { get; set; }
-    public int Imprecisos { get; set; }
+    public int Ambiguas { get; set; }
     public List<string> NombresNoEncontrados { get; set; } = new();
-    public List<string> NombresImprecisos { get; set; } = new();
+    public List<string> NombresAmbiguos { get; set; } = new();
 }
 
 // Resultado de la búsqueda de una sucursal por nombre
 public class ResultadoBusquedaSucursal
 {
     public string? ClvSuc { get; private set; }
-    public bool EsImpreciso { get; private set; }
+    public bool EsAmbigua { get; private set; }
 
     public bool Encontrado => ClvSuc != null;
 
     public static ResultadoBusquedaSucursal Encontrada(string clvSuc) => new() { ClvSuc = clvSuc };
-    public static ResultadoBusquedaSucursal Impreciso() => new() { EsImpreciso = true };
+    public static ResultadoBusquedaSucursal Imprecisa() => new() { EsAmbigua = true };
     public static ResultadoBusquedaSucursal NoEncontrada() => new();
 }
