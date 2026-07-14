@@ -402,9 +402,9 @@ namespace Mantenimientos.Controllers
 
                     if (busqueda.EsImpreciso)
                     {
-                        // NO actualizar nada si no se encontraron oincidncias
+                        // no actualizar nada si no se encontraron oincidncias
                         resultado.Imprecisos++;
-                        resultado.NombresImprecisos.Add($"'{nombreCelda}' (varias coincidencias parecidas, no se actualizó)");
+                        resultado.NombresImprecisos.Add(nombreCelda);
                         _logger.LogWarning($"Sucursal ambigua (varias coincidencias parecidas): {nombreCelda}");
                         continue;
                     }
@@ -412,7 +412,7 @@ namespace Mantenimientos.Controllers
                     if (!busqueda.Encontrado)
                     {
                         resultado.NoEncontrados++;
-                        resultado.NombresNoEncontrados.Add($"'{nombreCelda}' (no encontrada)");
+                        resultado.NombresNoEncontrados.Add(nombreCelda);
                         _logger.LogWarning($"Sucursal no encontrada: {nombreCelda}");
                         continue;
                     }
@@ -425,7 +425,7 @@ namespace Mantenimientos.Controllers
                     if (seguimiento == null)
                     {
                         resultado.NoEncontrados++;
-                        resultado.NombresNoEncontrados.Add($"'{nombreCelda}' (sin registro en período {periodo})");
+                        resultado.NombresNoEncontrados.Add(nombreCelda);
                         _logger.LogWarning($"Seguimiento no existe para CLV_SUC={clvSuc}, Período={periodo}");
                         continue;
                     }
@@ -437,6 +437,10 @@ namespace Mantenimientos.Controllers
                         seguimiento.FECHA_INI_ES = fechaIni;
                         seguimiento.FECHA_FIN_ES = fechaFin;
                         resultado.Actualizados++;
+
+                        var nombreMostrado = sucursalesActivas.FirstOrDefault(s => s.CLV_SUC == clvSuc)?.Nombre ?? nombreCelda;
+                        resultado.NombresActualizados.Add(nombreMostrado);
+
                         _logger.LogInformation($"Actualizado: CLV_SUC={clvSuc}, FechaIni={fechaIni?.ToString("dd/MM/yyyy") ?? "null"}, FechaFin={fechaFin?.ToString("dd/MM/yyyy") ?? "null"}");
                     }
                     else
@@ -447,30 +451,18 @@ namespace Mantenimientos.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // mensaje de resultado 
-                var msg = new System.Text.StringBuilder();
-                msg.Append($"Excel procesado: <strong>{resultado.Actualizados}</strong> ");
-                msg.Append($"de {resultado.TotalFilas} filas actualizadas para el Periodo {periodo}.");
-
-                if (resultado.NombresImprecisos.Any())
+                var resumen = new Mantenimientos.Models.ViewModels.ImportResumenVM
                 {
-                    msg.Append($" | <strong>{resultado.Imprecisos} con varias coincidencias (no se actualizaron):</strong> ");
-                    msg.Append(string.Join(", ", resultado.NombresImprecisos.Take(10)));
-                    if (resultado.NombresImprecisos.Count > 10)
-                        msg.Append($" … y {resultado.NombresImprecisos.Count - 10} más.");
-                }
+                    TotalFilas = resultado.TotalFilas,
+                    Actualizados = resultado.Actualizados,
+                    Imprecisos = resultado.Imprecisos,
+                    NoEncontrados = resultado.NoEncontrados,
+                    NombresActualizados = resultado.NombresActualizados,
+                    NombresImprecisos = resultado.NombresImprecisos,
+                    NombresNoEncontrados = resultado.NombresNoEncontrados
+                };
 
-                if (resultado.NombresNoEncontrados.Any())
-                {
-                    msg.Append($" | <strong>{resultado.NoEncontrados} no encontradas:</strong> ");
-                    msg.Append(string.Join(", ", resultado.NombresNoEncontrados.Take(10)));
-                    if (resultado.NombresNoEncontrados.Count > 10)
-                        msg.Append($" … y {resultado.NombresNoEncontrados.Count - 10} más.");
-                }
-
-                TempData["Mensaje"] = msg.ToString();
-                TempData["TipoAlerta"] = resultado.Actualizados > 0 ? "success" : "warning";
-                TempData["EsHtml"] = "true";
+                TempData["ImportResumenJson"] = System.Text.Json.JsonSerializer.Serialize(resumen);
             }
             catch (Exception ex)
             {

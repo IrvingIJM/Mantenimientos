@@ -366,6 +366,8 @@ public class ExcelUpDto
     public List<string> NombresNoEncontrados { get; set; } = new();
 
     public List<string> NombresImprecisos { get; set; } = new();
+
+    public List<string> NombresActualizados { get; set; } = new();
 }
 
 public class ResultadoBusquedaSucursal

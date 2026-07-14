@@ -43,6 +43,79 @@
         </div>
     }
 
+    @{
+        Mantenimientos.Models.ViewModels.ImportResumenVM? resumenImportacion = null;
+        var resumenImportacionJson = TempData["ImportResumenJson"] as string;
+        if (!string.IsNullOrEmpty(resumenImportacionJson))
+        {
+            resumenImportacion = System.Text.Json.JsonSerializer.Deserialize<Mantenimientos.Models.ViewModels.ImportResumenVM>(resumenImportacionJson);
+        }
+    }
+
+    @if (resumenImportacion != null)
+    {
+        var tipoImport = resumenImportacion.Actualizados > 0 ? "success" : "warning";
+        <div class="alert alert-@tipoImport alert-dismissible fade show shadow-sm mb-4" role="alert" style="max-width: 380px;">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="fw-semibold mb-2">
+                <i class="bi bi-check-circle-fill me-2"></i>Importación completada correctamente.
+            </div>
+            <div class="small">Registros procesados: <strong>@resumenImportacion.TotalFilas</strong></div>
+            <div class="small">Registros actualizados: <strong>@resumenImportacion.Actualizados</strong></div>
+            <div class="small">Coincidencias múltiples: <strong>@resumenImportacion.Imprecisos</strong></div>
+            <div class="small mb-2">Sucursales no encontradas: <strong>@resumenImportacion.NoEncontrados</strong></div>
+            <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalDetalleImportacion">
+                Ver detalles
+            </button>
+        </div>
+
+        <div class="modal fade" id="modalDetalleImportacion" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header" style="background:#1D3557; color:#fff;">
+                        <h5 class="modal-title">Detalle de la importación</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (resumenImportacion.NombresActualizados.Any())
+                        {
+                            <h6 class="fw-semibold">Sucursales actualizadas</h6>
+                            <ul class="mb-3">
+                                @foreach (var nombre in resumenImportacion.NombresActualizados)
+                                {
+                                    <li>@nombre</li>
+                                }
+                            </ul>
+                        }
+                        @if (resumenImportacion.NombresImprecisos.Any())
+                        {
+                            <h6 class="fw-semibold">Coincidencias múltiples</h6>
+                            <ul class="mb-3">
+                                @foreach (var nombre in resumenImportacion.NombresImprecisos)
+                                {
+                                    <li>@nombre</li>
+                                }
+                            </ul>
+                        }
+                        @if (resumenImportacion.NombresNoEncontrados.Any())
+                        {
+                            <h6 class="fw-semibold">Sucursales no encontradas</h6>
+                            <ul class="mb-0">
+                                @foreach (var nombre in resumenImportacion.NombresNoEncontrados)
+                                {
+                                    <li>@nombre</li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     <!-- Filtros -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header py-3"
@@ -204,7 +277,7 @@
                                         <i class="bi bi-funnel fs-6"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-dark p-3 shadow" aria-labelledby="dropdownExcelFiltro" style="min-width: 200px; font-size: 0.85rem;">
-                                        
+
                                         <li class="mb-2 pb-2 border-bottom border-secondary">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioTodo" value="Todos" checked onchange="filtrarTablaUnico()">
@@ -386,7 +459,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="formSubirArchivo" method="post" enctype="multipart/form-data">
+                <form id="formSubirArchivo" method="post" enctype="multipart/form-data" action="@Url.Action("Cargar", "Seguimiento")">
                     <div class="mb-3">
                         <label for="archivoExcel" class="form-label fw-bold">Selecciona un archivo Excel</label>
                         <input type="file" class="form-control" id="archivoExcel" name="archivo" accept=".xlsx,.xls" required>
@@ -411,7 +484,6 @@
         const urlExportar = '@Url.Action("Exportar", "Seguimiento")';
         const urlIndex = '@Url.Action("Index", "Seguimiento")';
         const urlDescargar = '@Url.Action("Descargar", "Seguimiento")';
-        const urlCargar = '@Url.Action("Cargar", "Seguimiento")';
 
         document.querySelectorAll('[data-bs-toggle="tooltip"]')
                 .forEach(el => new bootstrap.Tooltip(el));
@@ -467,14 +539,14 @@
             const modal = new bootstrap.Modal(document.getElementById('modalSubirFormato'));
             modal.show();
         });
-        
+
         // Manejo del envío del formulario de subir archivo
-        document.getElementById('formSubirArchivo').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        document.getElementById('formSubirArchivo').addEventListener('submit', (e) => {
             const inputArchivo = document.getElementById('archivoExcel');
             const archivo = inputArchivo.files[0];
 
             if (!archivo) {
+                e.preventDefault();
                 alert('Por favor, selecciona un archivo.');
                 return;
             }
@@ -483,6 +555,7 @@
             const extension = archivo.name.split('.').pop().toLowerCase();
 
             if (!extensionesPermitidas.includes(extension)) {
+                e.preventDefault();
                 alert('Solo se permiten archivos de Excel (.xlsx o .xls).');
                 inputArchivo.value = '';
                 return;
@@ -494,6 +567,7 @@
             ];
 
             if (!tiposPermitidos.includes(archivo.type)) {
+                e.preventDefault();
                 alert('El archivo seleccionado no es un archivo de Excel válido.');
                 inputArchivo.value = '';
                 return;
@@ -502,33 +576,6 @@
             const btnEnviar = document.getElementById('btnEnviarArchivo');
             btnEnviar.disabled = true;
             btnEnviar.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Procesando...';
-
-            const formData = new FormData();
-            formData.append('archivo', archivo);
-
-            const periodo = document.getElementById('filtroPeriodoModal').value;
-            if (periodo && periodo.trim() !== '') {
-                formData.append('filtroPeriodo', parseInt(periodo));
-            }
-
-            try {
-                const response = await fetch(urlCargar, { method: 'POST', body: formData });
-                if (response.redirected) {
-                    window.location.href = response.url;
-                    return;
-                }
-                if (response.ok) {
-                    window.location.reload();
-                    return;
-                }
-                alert('Ocurrió un error al subir el archivo.');
-            } catch (error) {
-                console.error(error);
-                alert('Error: ' + error.message);
-            } finally {
-                btnEnviar.disabled = false;
-                btnEnviar.innerHTML = '<i class="bi bi-upload me-2"></i>Subir';
-            }
         });
 
         // Exportar a Excel con filtros
