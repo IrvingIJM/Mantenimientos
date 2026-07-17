@@ -252,33 +252,33 @@ namespace Mantenimientos.Services
             {
                 if (filtroMesInicio.Value <= filtroMesFin.Value)
                 {
-                    sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) BETWEEN @MesIni AND @MesFin");
+                    sql.Append(" AND dbr.F_Termino > '1900-01-01' AND MONTH(dbr.F_Termino) BETWEEN @MesIni AND @MesFin");
                 }
                 else
                 {
-                    sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND (MONTH(dbr.F_Inicio) >= @MesIni OR MONTH(dbr.F_Inicio) <= @MesFin)");
+                    sql.Append(" AND dbr.F_Termino > '1900-01-01' AND (MONTH(dbr.F_Termino) >= @MesIni OR MONTH(dbr.F_Termino) <= @MesFin)");
                 }
                 cmd.Parameters.AddWithValue("@MesIni", filtroMesInicio.Value);
                 cmd.Parameters.AddWithValue("@MesFin", filtroMesFin.Value);
             }
             else if (filtroMesInicio.HasValue)
             {
-                sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) = @MesIni");
+                sql.Append(" AND dbr.F_Termino > '1900-01-01' AND MONTH(dbr.F_Termino) = @MesIni");
                 cmd.Parameters.AddWithValue("@MesIni", filtroMesInicio.Value);
             }
             else if (filtroMesFin.HasValue)
             {
-                sql.Append(" AND dbr.F_Inicio > '1900-01-01' AND MONTH(dbr.F_Inicio) = @MesFin");
+                sql.Append(" AND dbr.F_Termino > '1900-01-01' AND MONTH(dbr.F_Termino) = @MesFin");
                 cmd.Parameters.AddWithValue("@MesFin", filtroMesFin.Value);
             }
             if (ocultarSinFecha)
             {
-                sql.Append(" AND dbr.F_Inicio IS NOT NULL AND dbr.F_Inicio > '1900-01-01'");
+                sql.Append(" AND dbr.F_Termino IS NOT NULL AND dbr.F_Termino > '1900-01-01'");
             }
 
             if (filtroMesInicio.HasValue)
             {
-                sql.Append(" ORDER BY (MONTH(dbr.F_Inicio) - @MesIni + 12) % 12, suc.RUTA, suc.Sucursal");
+                sql.Append(" ORDER BY (MONTH(dbr.F_Termino) - @MesIni + 12) % 12, suc.RUTA, suc.Sucursal");
             }
             else
             {
