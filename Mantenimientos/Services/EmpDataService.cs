@@ -110,7 +110,7 @@ namespace Mantenimientos.Services
             if (exactas.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
             // ignorar palablas para comparar solamntee el nombre
-            string[] palabrasIgnorar = { "intermedio", "bimbo", "ceve", "." };
+            string[] palabrasIgnorar = { "intermedio", "bimbo", "ceve", "CEVE", "Cd.", "cedis", "Cedis" };
 
             string ObtenerCondicion(string texto)
             {
@@ -125,8 +125,8 @@ namespace Mantenimientos.Services
             {
                 // busqueda por condicion exacta
                 var candidatos = sucursales
-                    .Select(s => new { s.CLV_SUC, Esencia = ObtenerCondicion(QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant()) })
-                    .Where(s => s.Esencia == condicionExcel)
+                    .Select(s => new { s.CLV_SUC, Condicion = ObtenerCondicion(QuitarAcentos(ColapsarEspacios(s.Nombre)).ToLowerInvariant()) })
+                    .Where(s => s.Condicion == condicionExcel)
                     .ToList();
 
                 if (candidatos.Count == 1) return ResultadoBusquedaSucursal.Encontrada(candidatos[0].CLV_SUC);

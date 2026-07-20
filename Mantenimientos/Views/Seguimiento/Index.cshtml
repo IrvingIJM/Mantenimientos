@@ -77,6 +77,16 @@
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        @if (resumenImportacion.NombresNoEncontrados.Any())
+                        {
+                            <h6 class="fw-semibold">Sucursales no encontradas</h6>
+                            <ul class="mb-0">
+                                @foreach (var nombre in resumenImportacion.NombresNoEncontrados)
+                                {
+                                    <li>@nombre</li>
+                                }
+                            </ul>
+                        }
                         @if (resumenImportacion.NombresActualizados.Any())
                         {
                             <h6 class="fw-semibold">Sucursales actualizadas</h6>
@@ -92,16 +102,6 @@
                             <h6 class="fw-semibold">Coincidencias múltiples</h6>
                             <ul class="mb-3">
                                 @foreach (var nombre in resumenImportacion.NombresImprecisos)
-                                {
-                                    <li>@nombre</li>
-                                }
-                            </ul>
-                        }
-                        @if (resumenImportacion.NombresNoEncontrados.Any())
-                        {
-                            <h6 class="fw-semibold">Sucursales no encontradas</h6>
-                            <ul class="mb-0">
-                                @foreach (var nombre in resumenImportacion.NombresNoEncontrados)
                                 {
                                     <li>@nombre</li>
                                 }
