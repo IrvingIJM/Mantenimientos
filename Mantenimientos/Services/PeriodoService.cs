@@ -70,13 +70,11 @@ namespace Mantenimientos.Services
             {
                 await using var conn = new SqlConnection(_connDB);
                 await conn.OpenAsync();
-
                 await using var cmd = new SqlCommand(_spName, conn)
                 {
                     CommandType = CommandType.StoredProcedure,
                     CommandTimeout = 10
                 };
-
                 var resultado = await cmd.ExecuteScalarAsync();
                 return Convert.ToInt32(resultado);
             }
@@ -95,7 +93,6 @@ namespace Mantenimientos.Services
                 SELECT MAX(id_periodo)
                 FROM dbo.DBICET
                 WHERE id_periodo IS NOT NULL";
-
             await using var cmd = new SqlCommand(sql, conn);
             var result = await cmd.ExecuteScalarAsync();
             return Convert.ToInt32(result);

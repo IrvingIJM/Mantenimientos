@@ -93,9 +93,10 @@ namespace Mantenimientos.Controllers
                     FECHA_FIN_RE = d.FECHA_FIN_RE,
                     OBSERVACIONES = d.OBSERVACIONES
                 }).ToList(),
-
+ 
                 RutasDisponibles = listaRutas.Select(r => new SelectListItem
                 {
+ 
                     Value = r.ToString(),
                     Text = r.ToString(),
                     Selected = r == filtroRuta
@@ -227,8 +228,7 @@ namespace Mantenimientos.Controllers
                     AND NOT EXISTS (SELECT 1 FROM mttos.dbo.Seguimientos AS s
                     WHERE s.CLV_SUC = suc.CLV_SUC AND s.ID_PERIODO = @PeriodoActual);";
 
-                int insertados = await _context.Database.ExecuteSqlRawAsync(
-                    sql, new SqlParameter("@PeriodoActual", periodoActual));
+                int insertados = await _context.Database.ExecuteSqlRawAsync(sql, new SqlParameter("@PeriodoActual", periodoActual));
 
                 TempData["Mensaje"] = $"Importación exitosa — {insertados} sucursales agregadas para el Periodo {periodoActual}.";
                 TempData["TipoAlerta"] = "success";
@@ -305,7 +305,6 @@ namespace Mantenimientos.Controllers
                 fila++;
             }
             hoja.Columns("B:I").AdjustToContents();
-
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
             return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Fechas_P{periodo}_{DateTime.Now:yyyyMMdd}.xlsx");
@@ -365,14 +364,12 @@ namespace Mantenimientos.Controllers
                 TempData["TipoAlerta"] = "warning";
                 return RedirectToAction(nameof(Index), new { filtroPeriodo });
             }
-
             try
             {
                 int periodoActual = await _periodoService.ObtenerPeriodoActualAsync();
                 int periodo = filtroPeriodo ?? periodoActual;
 
                 var resultado = new ExcelUpDto();
-
                 var sucursalesActivas = await _empDataService.ObtenerSucursalesActivasAsync();
 
                 using var stream = archivo.OpenReadStream();
@@ -390,7 +387,6 @@ namespace Mantenimientos.Controllers
 
                     if (string.IsNullOrWhiteSpace(nombreCelda))
                         continue;
-
                     resultado.TotalFilas++;
 
                     DateTime? fechaIni = LeerFechaExcel(hoja.Cell(f, 4));
@@ -416,12 +412,9 @@ namespace Mantenimientos.Controllers
                         _logger.LogWarning($"Sucursal no encontrada: {nombreCelda}");
                         continue;
                     }
-
                     string clvSuc = busqueda.ClvSuc!;
-
                     var seguimiento = await _context.Seguimientos
                         .FirstOrDefaultAsync(s => s.CLV_SUC == clvSuc && s.ID_PERIODO == periodo);
-
                     if (seguimiento == null)
                     {
                         resultado.NoEncontrados++;
@@ -448,7 +441,6 @@ namespace Mantenimientos.Controllers
                         _logger.LogWarning($"Sin fechas válidas para: {nombreCelda} (CLV_SUC={clvSuc})");
                     }
                 }
-
                 await _context.SaveChangesAsync();
 
                 var resumen = new Mantenimientos.Models.ViewModels.ImportResumenVM
@@ -470,7 +462,6 @@ namespace Mantenimientos.Controllers
                 TempData["Mensaje"] = $"Error al procesar el archivo: {ex.Message}";
                 TempData["TipoAlerta"] = "danger";
             }
-
             return RedirectToAction(nameof(Index), new { filtroPeriodo });
         }
 
