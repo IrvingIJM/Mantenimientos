@@ -91,21 +91,6 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // hay manera de mejorar la busqueda de sucursal por nombre, si es asi, impkemeta un algoritmo de busqueda mas preciso, que pueda encontrar coincidencias parciales y exactas, y que pueda manejar errores tipograficos y variaciones de nombre.
-        //te mando un ejemplo de como se muestra en el excel y como se encuentra en la base de datos, para que puedas hacer una busqueda mas precisa y exacta, y que pueda encontrar coincidencias parciales y exactas, y que pueda manejar errores tipograficos y variaciones de nombre. adjunto el servicio (EmpDataService) 
-        // CORRECCIONES:
-        // 1. Ordenar el mensajse de suc importadas por orden alfabetico de nombre de sucursal
-        // 2. el mensajse se uetre por encima de la tabla de seguimiento, y no al principio porque baja toda la tabla,
-        // 3. Anadir un filtro en la tabla de sucursales para buscar por letra y que este encuentre todas las coincidencias de la letra, y que se pueda seleccionar la sucursal deseada, y que se pueda actualizar el seguimiento de esa sucursal.
-        // Importación completada correctamente.
-        // Registros procesados: 283
-        // Registros actualizados: 281
-        // Coincidencias múltiples: 2
-        // Sucursales no encontradas: 0
-        // Se actuaizaron 281 de 283 sucursales y hay 2 con coincidencias multiples
-        // pero en la tabla principal hay 8 sucursales que aparecen como No programadas (No se le inserto ninguna fecha), poeque esta pasando esto y como se lsolucionaria
-
-
         // Búsqueda robusta de sucursal combinando coincidencias exactas, intersección y Distancia de Levenshtein (Fuzzy Matching)
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
@@ -127,7 +112,7 @@ namespace Mantenimientos.Services
             var candidatosCoincidencia = sucursales
                 .Select(s => new { s.CLV_SUC, CoincidenciaBD = ExtraerCoincidencia(NormalizarTexto(s.Nombre)) })
                 .ToList();
-
+              
             // Búsqueda Exacta por Esencia
             var coincidenciaExacta = candidatosCoincidencia.Where(c => c.CoincidenciaBD == coincidenciaExcel).ToList();
             if (coincidenciaExacta.Count == 1) return ResultadoBusquedaSucursal.Encontrada(coincidenciaExacta[0].CLV_SUC);
@@ -177,7 +162,6 @@ namespace Mantenimientos.Services
         }
 
         // metodos auxiliares para la buqueda
-
         private static string NormalizarTexto(string texto)
         {
             if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
@@ -201,7 +185,7 @@ namespace Mantenimientos.Services
 
         private static string ExtraerCoincidencia(string textoNormalizado)
         {
-            string[] palabrasIgnorar = { "intermedio", "bimbo", "ceve", "cd", "de"};
+            string[] palabrasIgnorar = {"intermedio", "bimbo", "ceve", "cd", "de"};
 
             var palabras = textoNormalizado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var palabrasUtiles = palabras.Where(p => !palabrasIgnorar.Contains(p));
@@ -234,7 +218,7 @@ namespace Mantenimientos.Services
                         Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
                         d[i - 1, j - 1] + cost);
                 }
-            }
+            } 
             int operaciones = d[n, m];
             int maxLongitud = Math.Max(n, m);
             return 1.0 - ((double)operaciones / maxLongitud);
@@ -407,7 +391,7 @@ public class SeguimientoJoinDto
     public string CLV_SUC { get; set; } = string.Empty;
     public int ID_PERIODO { get; set; }
     public string SUCURSAL { get; set; } = string.Empty;
-    public byte RUTA { get; set; }
+    public byte RUTA { get; set; } 
     public byte REGION { get; set; }
     public DateTime? FECHA_INI_ES { get; set; }
     public DateTime? FECHA_FIN_ES { get; set; }
