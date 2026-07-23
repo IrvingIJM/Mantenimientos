@@ -152,7 +152,10 @@ namespace Mantenimientos.Services
                     .Where(c =>
                     {
                         var palabrasBD = c.CoincidenciaBD.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        return palabrasExcel.All(pe => palabrasBD.Any(pb => CalcularSimilitud(pe, pb) >= 0.90));
+                        if (palabrasBD.Length < palabrasExcel.Length) return false;
+                        int coincidenciaExcel = palabrasExcel.Count(pe => palabrasBD.Any(pb => CalcularSimilitud(pe, pb) >= 0.80));
+                        int coincidenciaBD = palabrasBD.Count(pb => palabrasExcel.Any(pe => CalcularSimilitud(pb, pe) >= 0.80));
+                        return coincidenciaExcel == palabrasExcel.Length || coincidenciaBD == palabrasBD.Length;
                     })
                     .ToList();
 
