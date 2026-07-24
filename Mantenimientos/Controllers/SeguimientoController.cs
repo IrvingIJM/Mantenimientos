@@ -443,7 +443,7 @@ namespace Mantenimientos.Controllers
                 }
                 await _context.SaveChangesAsync();
 
-                // Orden alfabético (A-Z) para el detalle de importación, respetando acentos/ñ del español
+                // se ordena alfabeticamente los nombres para mostrar en el resumen
                 var comparadorEs = StringComparer.Create(new System.Globalization.CultureInfo("es-ES"), ignoreCase: true);
 
                 var resumen = new Mantenimientos.Models.ViewModels.ImportResumenVM

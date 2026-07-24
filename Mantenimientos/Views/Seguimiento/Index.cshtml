@@ -10,7 +10,7 @@
             ? "—"
             : fecha.Value.ToString("dd/MM/yyyy");
 
-    // sistema de reportes (bimbo/barcel) a partir del prefijo de CLV_SUC.
+    // sistema de reportes (bimbo/barcel) a partir del prefijo de CLV_SUC
     static string? EmpresaReporte(string clvSuc)
     {
         if (string.IsNullOrWhiteSpace(clvSuc) || clvSuc.Length < 3) return null;
@@ -577,7 +577,7 @@
             modal.show();
         });
 
-        // Manejo del envío del formulario de subir archivo
+        // envio del formulario de subir archivo
         document.getElementById('formSubirArchivo').addEventListener('submit', (e) => {
             const inputArchivo = document.getElementById('archivoExcel');
             const archivo = inputArchivo.files[0];
@@ -635,15 +635,7 @@
             window.location.href = urlExportar + '?' + p.toString();
         });
 
-
-        // ---------------------------------------------------------------
-        // Búsqueda difusa (fuzzy matching) de Sucursal para el filtro de tabla
-        // Combina: coincidencia exacta -> substring -> intersección de
-        // palabras -> Distancia de Levenshtein, igual que la búsqueda que
-        // usa la importación de Excel en el backend.
-        // ---------------------------------------------------------------
-
-        // Normaliza: minúsculas, sin acentos, espacios colapsados
+        // normaliza texto
         function normalizarTexto(texto) {
             if (!texto) return '';
             return texto.toString().trim().toLowerCase()
@@ -651,7 +643,6 @@
                 .replace(/\s+/g, ' ');
         }
 
-        // Distancia de Levenshtein clásica (programación dinámica)
         function distanciaLevenshtein(a, b) {
             const m = a.length, n = b.length;
             if (m === 0) return n;
@@ -673,7 +664,7 @@
             return fila[n];
         }
 
-        // Similitud 0..1 basada en Levenshtein
+        // calcula la simiitud 
         function similitudLevenshtein(a, b) {
             if (!a && !b) return 1;
             if (!a || !b) return 0;
@@ -682,21 +673,17 @@
             return 1 - (distanciaLevenshtein(a, b) / maxLen);
         }
 
-        // Determina si el nombre de sucursal coincide con el texto buscado
+        //si el nombre de sucursal coincide con el texto buscado
         function coincideSucursal(nombreSucursal, textoBusqueda) {
             const busq = normalizarTexto(textoBusqueda);
-            if (!busq) return true; // sin filtro -> todo coincide
+            if (!busq) return true;
 
             const suc = normalizarTexto(nombreSucursal);
 
-            // 1) Coincidencia exacta
-            if (suc === busq) return true;
-
-            // 2) Coincidencia directa por substring (lo más común al escribir)
+            // lo mas comunaal escribir
             if (suc.includes(busq)) return true;
 
-            // 3) Intersección de palabras: cada palabra buscada aparece
-            //    (exacta o muy similar) dentro de alguna palabra de la sucursal
+            // cada palabra buscada aparece exacta o muy parecisa dentro de alguna palabra de la sucursal
             const palabrasBusq = busq.split(' ').filter(Boolean);
             const palabrasSuc = suc.split(' ').filter(Boolean);
             const interseccionOk = palabrasBusq.length > 0 && palabrasBusq.every(pb =>
@@ -704,12 +691,10 @@
             );
             if (interseccionOk) return true;
 
-            // 4) Búsqueda difusa completa (Levenshtein) para errores de tecleo
-            const UMBRAL_SIMILITUD = 0.6;
-            return similitudLevenshtein(suc, busq) >= UMBRAL_SIMILITUD;
+            const SIMILITUD_ENTRADA = 0.6;
+            return similitudLevenshtein(suc, busq) >= SIMILITUD_ENTRADA;
         }
 
-        // Filtrado combinado: estado (Días de atraso) + texto de Sucursal
         function aplicarFiltrosTabla() {
             const estadoSeleccionado = document.querySelector('input[name="radioEstadoFiltro"]:checked')?.value || 'Todos';
             const textoSucursal = document.getElementById('filtroSucursalInput')?.value || '';
