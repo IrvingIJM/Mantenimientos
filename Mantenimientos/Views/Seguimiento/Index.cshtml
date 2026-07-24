@@ -55,18 +55,21 @@
     @if (resumenImportacion != null)
     {
         var tipoImport = resumenImportacion.Actualizados > 0 ? "success" : "warning";
-        <div class="alert alert-@tipoImport alert-dismissible fade show shadow-sm mb-4" role="alert" style="max-width: 380px;">
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            <div class="fw-semibold mb-2">
-                <i class="bi bi-check-circle-fill me-2"></i>Importación completada correctamente.
+        <!-- Alerta de importación -->
+        <div class="position-fixed" style="top: 80px; right: 20px; width: 380px; max-width: calc(100vw - 40px); z-index: 1080;">
+            <div class="alert alert-@tipoImport alert-dismissible fade show shadow-lg mb-0" role="alert">
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="fw-semibold mb-2">
+                    <i class="bi bi-check-circle-fill me-2"></i>Importación completada correctamente.
+                </div>
+                <div class="small">Registros procesados: <strong>@resumenImportacion.TotalFilas</strong></div>
+                <div class="small">Registros actualizados: <strong>@resumenImportacion.Actualizados</strong></div>
+                <div class="small">Coincidencias múltiples: <strong>@resumenImportacion.Imprecisos</strong></div>
+                <div class="small mb-2">Sucursales no encontradas: <strong>@resumenImportacion.NoEncontrados</strong></div>
+                <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalDetalleImportacion">
+                    Ver detalles
+                </button>
             </div>
-            <div class="small">Registros procesados: <strong>@resumenImportacion.TotalFilas</strong></div>
-            <div class="small">Registros actualizados: <strong>@resumenImportacion.Actualizados</strong></div>
-            <div class="small">Coincidencias múltiples: <strong>@resumenImportacion.Imprecisos</strong></div>
-            <div class="small mb-2">Sucursales no encontradas: <strong>@resumenImportacion.NoEncontrados</strong></div>
-            <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalDetalleImportacion">
-                Ver detalles
-            </button>
         </div>
 
         <div class="modal fade" id="modalDetalleImportacion" tabindex="-1" aria-hidden="true">
@@ -278,7 +281,26 @@
                         <tr style="font-size:0.78rem; letter-spacing:0.5px;">
                             <th class="ps-3 text-white py-3">Ruta</th>
                             <th class="text-white py-3 text-center">Región</th>
-                            <th class="text-white py-3">Sucursal</th>
+
+                            <!-- Sucursal con filtro de texto -->
+                            <th class="text-white py-3 text-center position-relative">
+                                <div class="dropdown d-inline-block">
+                                    <span class="me-1">Sucursal</span>
+                                    <button class="btn btn-sm p-0 border-0 text-white" type="button" id="dropdownFiltroSucursal" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                        <i class="bi bi-funnel fs-6"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-dark p-3 shadow" aria-labelledby="dropdownFiltroSucursal" style="min-width: 240px; font-size: 0.85rem;">
+                                        <li class="mb-2">
+                                            <label class="form-label fw-bold text-uppercase small mb-1" for="filtroSucursalInput">
+                                                Buscar sucursal
+                                            </label>
+                                            <input type="text" class="form-control form-control-sm" id="filtroSucursalInput"
+                                                   placeholder="Escribe el nombre..." autocomplete="off"
+                                                   oninput="aplicarFiltrosTabla()">
+                                        </li>
+                                    </ul>
+                                </div>
+                            </th>
                             <th class="text-white py-3 text-center">Fecha Ini. Estimada</th>
                             <th class="text-white py-3 text-center">Fecha Fin Estimada</th>
                             <th class="text-white py-3 text-center">Fecha Ini. Real</th>
@@ -288,51 +310,51 @@
                             <th class="text-white py-3 text-center position-relative">
                                 <div class="dropdown d-inline-block">
                                     <span class="me-1">Días de atraso</span>
-                                    <button class="btn btn-sm p-0 border-0 text-white" type="button" id="dropdownExcelFiltro" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                    <button class="btn btn-sm p-0 border-0 text-white" type="button" id="dropdownFiltroAtraso" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
                                         <i class="bi bi-funnel fs-6"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-dark p-3 shadow" aria-labelledby="dropdownExcelFiltro" style="min-width: 200px; font-size: 0.85rem;">
+                                    <ul class="dropdown-menu dropdown-menu-dark p-3 shadow" aria-labelledby="dropdownFiltroAtraso" style="min-width: 200px; font-size: 0.85rem;">
 
                                         <li class="mb-2 pb-2 border-bottom border-secondary">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioTodo" value="Todos" checked onchange="filtrarTablaUnico()">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioTodo" value="Todos" checked onchange="aplicarFiltrosTabla()">
                                                 <label class="form-check-label fw-bold" for="radioTodo">Mostrar Todos</label>
                                             </div>
                                         </li>
 
                                         <li class="mb-1">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioAtraso" value="atraso" onchange="filtrarTablaUnico()">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioAtraso" value="atraso" onchange="aplicarFiltrosTabla()">
                                                 <label class="form-check-label" for="radioAtraso">Días atrasados</label>
                                             </div>
                                         </li>
                                         <li class="mb-1">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioAdelanto" value="adelanto" onchange="filtrarTablaUnico()">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioAdelanto" value="adelanto" onchange="aplicarFiltrosTabla()">
                                                 <label class="form-check-label" for="radioAdelanto">Días adelantados</label>
                                             </div>
                                         </li>
                                         <li class="mb-1">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioTiempo" value="tiempo" onchange="filtrarTablaUnico()">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioTiempo" value="tiempo" onchange="aplicarFiltrosTabla()">
                                                 <label class="form-check-label" for="radioTiempo">En tiempo</label>
                                             </div>
                                         </li>
                                         <li class="mb-1">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioNoIni" value="no-iniciado" onchange="filtrarTablaUnico()">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioNoIni" value="no-iniciado" onchange="aplicarFiltrosTabla()">
                                                 <label class="form-check-label" for="radioNoIni">No iniciado</label>
                                             </div>
                                         </li>
                                         <li class="mb-1">
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioSinProg" value="sin-programar" onchange="filtrarTablaUnico()">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioSinProg" value="sin-programar" onchange="aplicarFiltrosTabla()">
                                                 <label class="form-check-label" for="radioSinProg">No programado</label>
                                             </div>
                                         </li>
                                         <li>
                                             <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioProceso" value="en-proceso" onchange="filtrarTablaUnico()">
+                                                <input class="form-check-input" type="radio" name="radioEstadoFiltro" id="radioProceso" value="en-proceso" onchange="aplicarFiltrosTabla()">
                                                 <label class="form-check-label" for="radioProceso">En proceso</label>
                                             </div>
                                         </li>
@@ -385,7 +407,7 @@
                                 else dataEstado = "tiempo";
                             }
 
-                            <tr data-estado="@dataEstado" class="mantenimiento-fila">
+                            <tr data-estado="@dataEstado" data-sucursal="@item.SUCURSAL" class="mantenimiento-fila">
                                 <td class="ps-3 fw-bold text-primary">@item.RUTA</td>
                                 <td class="text-muted text-center">@item.REGION_NOMBRE</td>
                                 <td class="fw-semibold text-dark text-truncate" title="@item.SUCURSAL">@item.SUCURSAL</td>
@@ -501,7 +523,7 @@
         const urlDescargar = '@Url.Action("Descargar", "Seguimiento")';
 
         document.querySelectorAll('[data-bs-toggle="tooltip"]')
-                .forEach(el => new bootstrap.Tooltip(el));
+            .forEach(el => new bootstrap.Tooltip(el));
 
         // Limitar opciones de mes fin según mes inicio
         function limitarMesFin() {
@@ -614,16 +636,94 @@
         });
 
 
-        // Filtrado con Radio Buttons
-        function filtrarTablaUnico() {
-            const seleccionado = document.querySelector('input[name="radioEstadoFiltro"]:checked').value;
+        // ---------------------------------------------------------------
+        // Búsqueda difusa (fuzzy matching) de Sucursal para el filtro de tabla
+        // Combina: coincidencia exacta -> substring -> intersección de
+        // palabras -> Distancia de Levenshtein, igual que la búsqueda que
+        // usa la importación de Excel en el backend.
+        // ---------------------------------------------------------------
+
+        // Normaliza: minúsculas, sin acentos, espacios colapsados
+        function normalizarTexto(texto) {
+            if (!texto) return '';
+            return texto.toString().trim().toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, ' ');
+        }
+
+        // Distancia de Levenshtein clásica (programación dinámica)
+        function distanciaLevenshtein(a, b) {
+            const m = a.length, n = b.length;
+            if (m === 0) return n;
+            if (n === 0) return m;
+
+            const fila = new Array(n + 1);
+            for (let j = 0; j <= n; j++) fila[j] = j;
+
+            for (let i = 1; i <= m; i++) {
+                let anterior = fila[0];
+                fila[0] = i;
+                for (let j = 1; j <= n; j++) {
+                    const temp = fila[j];
+                    const costo = a[i - 1] === b[j - 1] ? 0 : 1;
+                    fila[j] = Math.min(fila[j] + 1, fila[j - 1] + 1, anterior + costo);
+                    anterior = temp;
+                }
+            }
+            return fila[n];
+        }
+
+        // Similitud 0..1 basada en Levenshtein
+        function similitudLevenshtein(a, b) {
+            if (!a && !b) return 1;
+            if (!a || !b) return 0;
+            const maxLen = Math.max(a.length, b.length);
+            if (maxLen === 0) return 1;
+            return 1 - (distanciaLevenshtein(a, b) / maxLen);
+        }
+
+        // Determina si el nombre de sucursal coincide con el texto buscado
+        function coincideSucursal(nombreSucursal, textoBusqueda) {
+            const busq = normalizarTexto(textoBusqueda);
+            if (!busq) return true; // sin filtro -> todo coincide
+
+            const suc = normalizarTexto(nombreSucursal);
+
+            // 1) Coincidencia exacta
+            if (suc === busq) return true;
+
+            // 2) Coincidencia directa por substring (lo más común al escribir)
+            if (suc.includes(busq)) return true;
+
+            // 3) Intersección de palabras: cada palabra buscada aparece
+            //    (exacta o muy similar) dentro de alguna palabra de la sucursal
+            const palabrasBusq = busq.split(' ').filter(Boolean);
+            const palabrasSuc = suc.split(' ').filter(Boolean);
+            const interseccionOk = palabrasBusq.length > 0 && palabrasBusq.every(pb =>
+                palabrasSuc.some(ps => ps.includes(pb) || similitudLevenshtein(pb, ps) >= 0.75)
+            );
+            if (interseccionOk) return true;
+
+            // 4) Búsqueda difusa completa (Levenshtein) para errores de tecleo
+            const UMBRAL_SIMILITUD = 0.6;
+            return similitudLevenshtein(suc, busq) >= UMBRAL_SIMILITUD;
+        }
+
+        // Filtrado combinado: estado (Días de atraso) + texto de Sucursal
+        function aplicarFiltrosTabla() {
+            const estadoSeleccionado = document.querySelector('input[name="radioEstadoFiltro"]:checked')?.value || 'Todos';
+            const textoSucursal = document.getElementById('filtroSucursalInput')?.value || '';
             const filas = document.querySelectorAll(".mantenimiento-fila");
             let contadorVisible = 0;
 
             filas.forEach(fila => {
                 const estadoFila = fila.getAttribute("data-estado");
+                const sucursalFila = fila.getAttribute("data-sucursal") || '';
 
-                if (seleccionado === "Todos" || estadoFila === seleccionado) {
+                const pasaEstado = estadoSeleccionado === "Todos" || estadoFila === estadoSeleccionado;
+                const pasaSucursal = coincideSucursal(sucursalFila, textoSucursal);
+
+                if (pasaEstado && pasaSucursal) {
                     fila.style.display = "";
                     contadorVisible++;
                 } else {

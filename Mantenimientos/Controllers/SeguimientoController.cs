@@ -93,10 +93,10 @@ namespace Mantenimientos.Controllers
                     FECHA_FIN_RE = d.FECHA_FIN_RE,
                     OBSERVACIONES = d.OBSERVACIONES
                 }).ToList(),
- 
+
                 RutasDisponibles = listaRutas.Select(r => new SelectListItem
                 {
- 
+
                     Value = r.ToString(),
                     Text = r.ToString(),
                     Selected = r == filtroRuta
@@ -443,15 +443,18 @@ namespace Mantenimientos.Controllers
                 }
                 await _context.SaveChangesAsync();
 
+                // Orden alfabético (A-Z) para el detalle de importación, respetando acentos/ñ del español
+                var comparadorEs = StringComparer.Create(new System.Globalization.CultureInfo("es-ES"), ignoreCase: true);
+
                 var resumen = new Mantenimientos.Models.ViewModels.ImportResumenVM
                 {
                     TotalFilas = resultado.TotalFilas,
                     Actualizados = resultado.Actualizados,
                     Imprecisos = resultado.Imprecisos,
                     NoEncontrados = resultado.NoEncontrados,
-                    NombresActualizados = resultado.NombresActualizados,
-                    NombresImprecisos = resultado.NombresImprecisos,
-                    NombresNoEncontrados = resultado.NombresNoEncontrados
+                    NombresActualizados = resultado.NombresActualizados.OrderBy(n => n, comparadorEs).ToList(),
+                    NombresImprecisos = resultado.NombresImprecisos.OrderBy(n => n, comparadorEs).ToList(),
+                    NombresNoEncontrados = resultado.NombresNoEncontrados.OrderBy(n => n, comparadorEs).ToList()
                 };
 
                 TempData["ImportResumenJson"] = System.Text.Json.JsonSerializer.Serialize(resumen);

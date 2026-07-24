@@ -90,8 +90,12 @@ namespace Mantenimientos.Services
                 lista.Add(LeerSucursalDto(reader));
             return lista;
         }
-
-        // Búsqueda robusta de sucursal combinando coincidencias exactas, intersección y Distancia de Levenshtein (Fuzzy Matching)
+        // este es mi proyecto actalizado, me ayudas a corregir lo siguiente:
+        // 1. El mensaje de detalle de importacion, debe mostrar las sucursales de manerea ascendente, de la A a la Z.
+        // 2. El mesaje que apaarece despus de cargar el archivo (Importacion realizada) aparezca por encima de la tabla, ya que al mostrar el mensaje baja la tabla y se ve mal
+        // 3. Agregar un filtro en la columna de Sucursal, igual al filtro de Dias de Atraso, pero esta vez para que el usuario ingrese caracteres y bucar la sucursal con mayor coincidencia
+        // 4. Búsqueda robusta de sucursal combinando coincidencias exactas, intersección y Distancia de Levenshtein (Fuzzy Matching)
+        // dame el codigo de los archivos que debo modificar. analizalo bien y tomate tu tiempo para darme la solucion correcta.
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
             if (string.IsNullOrWhiteSpace(nombreExcel) || sucursales.Count == 0)
