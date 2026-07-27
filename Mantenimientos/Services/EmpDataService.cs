@@ -91,24 +91,20 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        //no me actualizo las sucursales
-
-
         // Búsqueda de sucursal por nombre con normalización, Levenshtein e intersección corregida
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
             if (string.IsNullOrWhiteSpace(nombreExcel) || sucursales.Count == 0)
                 return ResultadoBusquedaSucursal.NoEncontrada();
-
-            // 1. Normalización inicial
+            // normalizar el nombre de la sucursal del Excel
             string normalizadoExcel = NormalizarTexto(nombreExcel);
 
-            // 2. Búsqueda Exacta Rápida (sin quitar palabras clave)
+            // busqueda sin quitar palabras clave, para encontrar coincidencias exactas
             var exactas = sucursales.Where(s => NormalizarTexto(s.Nombre) == normalizadoExcel).ToList();
             if (exactas.Count == 1) return ResultadoBusquedaSucursal.Encontrada(exactas[0].CLV_SUC);
             if (exactas.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
-            // 3. Quitar palabras comunes/corporativas
+            // quitar palabras comunes 
             string coincidenciaExcel = ExtraerCoincidencia(normalizadoExcel);
             if (string.IsNullOrWhiteSpace(coincidenciaExcel)) return ResultadoBusquedaSucursal.NoEncontrada();
 
@@ -116,12 +112,12 @@ namespace Mantenimientos.Services
                 .Select(s => new { s.CLV_SUC, CoincidenciaBD = ExtraerCoincidencia(NormalizarTexto(s.Nombre)) })
                 .ToList();
 
-            // 4. Búsqueda Exacta por Esencia
+            // busqueda exacta con coincidencia de palabras clave
             var coincidenciaExacta = candidatosCoincidencia.Where(c => c.CoincidenciaBD == coincidenciaExcel).ToList();
             if (coincidenciaExacta.Count == 1) return ResultadoBusquedaSucursal.Encontrada(coincidenciaExacta[0].CLV_SUC);
             if (coincidenciaExacta.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
-            // 5. Búsqueda Difusa (Fuzzy Matching) con Levenshtein
+            // busqueda difusa con Levenshtein
             double umbralAceptacion = 0.50;
             var resultadosFuzzy = candidatosCoincidencia
                 .Select(c => new
@@ -145,7 +141,7 @@ namespace Mantenimientos.Services
                 return ResultadoBusquedaSucursal.Encontrada(resultadosFuzzy[0].CLV_SUC);
             }
 
-            // 6. Búsqueda por Intersección de Palabras
+            // busqueda por intersección de palabras con Levenshtein
             var palabrasExcel = coincidenciaExcel.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var resultadosInterseccion = candidatosCoincidencia
                 .Where(c =>
@@ -171,7 +167,7 @@ namespace Mantenimientos.Services
         {
             if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
 
-            // Limpieza básica de signos y espacios
+            // Limpieza de signos y espacios
             string limpio = texto.Trim().Replace("(", " ").Replace(")", " ").Replace("-", " ").Replace(".", " ");
             limpio = System.Text.RegularExpressions.Regex.Replace(limpio, @"\s+", " ").ToLowerInvariant();
 
