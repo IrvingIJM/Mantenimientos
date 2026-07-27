@@ -319,8 +319,11 @@ namespace Mantenimientos.Controllers
             hoja.Style.Font.FontName = "Arial";
             hoja.Style.Font.FontSize = 11;
 
+            hoja.Cell("C2").Value = "sucursal";
             hoja.Cell("C3").Value = "Sucursal";
+            hoja.Cell("D2").Value = "dd/mm/yyyy";
             hoja.Cell("D3").Value = "Fecha Inicio";
+            hoja.Cell("E2").Value = "dd/mm/yyyy";
             hoja.Cell("E3").Value = "Fecha Fin";
 
             var rango = hoja.Range("C3:E3");
