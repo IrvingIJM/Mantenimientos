@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using System.Text.Json;
 
 namespace Mantenimientos.Controllers
@@ -184,8 +185,8 @@ namespace Mantenimientos.Controllers
                 var existente = await _context.Seguimientos.FindAsync(model.ID);
                 if (existente is null) return NotFound();
 
-                existente.FECHA_INI_ES = model.FECHA_INI_ES;
-                existente.FECHA_FIN_ES = model.FECHA_FIN_ES;
+                existente.FECHA_INI_ES = model.FECHA_INI_ES?.Date;
+                existente.FECHA_FIN_ES = model.FECHA_FIN_ES?.Date;
                 existente.OBSERVACIONES = model.OBSERVACIONES;
 
                 _context.Seguimientos.Update(existente);
@@ -339,7 +340,6 @@ namespace Mantenimientos.Controllers
         [HttpPost]
         public async Task<IActionResult> Cargar(IFormFile archivo, int? filtroPeriodo)
         {
-
             if (archivo == null || archivo.Length == 0)
             {
                 TempData["Mensaje"] = "Debes seleccionar un archivo Excel (.xlsx) antes de subir.";
@@ -357,7 +357,6 @@ namespace Mantenimientos.Controllers
                 return RedirectToAction(nameof(Index), new { filtroPeriodo });
             }
 
-            // Verificación adicional por contenido real del archivo
             if (!await EsArchivoExcelValidoAsync(archivo))
             {
                 TempData["Mensaje"] = "El archivo no es un Excel válido. Verifica que no esté dañado ni sea otro tipo de archivo renombrado.";
@@ -398,10 +397,9 @@ namespace Mantenimientos.Controllers
 
                     if (busqueda.EsImpreciso)
                     {
-                        // no actualizar nada si no se encontraron oincidncias
                         resultado.Imprecisos++;
                         resultado.NombresImprecisos.Add(nombreCelda);
-                        _logger.LogWarning($"Sucursal ambigua (varias coincidencias parecidas): {nombreCelda}");
+                        _logger.LogWarning($"Sucursal ambigua: {nombreCelda}");
                         continue;
                     }
 
@@ -423,7 +421,6 @@ namespace Mantenimientos.Controllers
                         continue;
                     }
 
-                    // Solo actualizar si hay al menos una fecha valida
                     bool tieneAlgunaFecha = fechaIni.HasValue || fechaFin.HasValue;
                     if (tieneAlgunaFecha)
                     {
@@ -443,10 +440,9 @@ namespace Mantenimientos.Controllers
                 }
                 await _context.SaveChangesAsync();
 
-                // se ordena alfabeticamente los nombres para mostrar en el resumen
-                var comparadorEs = StringComparer.Create(new System.Globalization.CultureInfo("es-ES"), ignoreCase: true);
+                var comparadorEs = StringComparer.Create(new CultureInfo("es-MX"), ignoreCase: true);
 
-                var resumen = new Mantenimientos.Models.ViewModels.ImportResumenVM
+                var resumen = new ImportResumenVM
                 {
                     TotalFilas = resultado.TotalFilas,
                     Actualizados = resultado.Actualizados,
@@ -457,7 +453,7 @@ namespace Mantenimientos.Controllers
                     NombresNoEncontrados = resultado.NombresNoEncontrados.OrderBy(n => n, comparadorEs).ToList()
                 };
 
-                TempData["ImportResumenJson"] = System.Text.Json.JsonSerializer.Serialize(resumen);
+                TempData["ImportResumenJson"] = JsonSerializer.Serialize(resumen);
             }
             catch (Exception ex)
             {
@@ -511,14 +507,34 @@ namespace Mantenimientos.Controllers
             if (celda.IsEmpty()) return null;
 
             if (celda.DataType == XLDataType.DateTime)
-                return celda.GetDateTime();
+            {
+                return celda.GetDateTime().Date; 
+            }
 
-            // Intentar parsear como texto
+            // Si la celda viene como número (posiblemente un valor de fecha en formato OLE)
+            if (celda.DataType == XLDataType.Number)
+            {
+                double val = celda.GetDouble();
+                if (val > 0)
+                {
+                    try
+                    {
+                        return DateTime.FromOADate(val).Date;
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                }
+            }
+
+            // Si la celda viene formateada como Texto
             var texto = celda.GetString().Trim();
             if (string.IsNullOrEmpty(texto)) return null;
 
-            var culture = new System.Globalization.CultureInfo("es-ES");
+            var cultureMx = new CultureInfo("es-MX");
 
+            // Formatos estrictos para fechas escritas como "lun 16/05/26" o con día de semana
             string[] formatosConDia = {
                 "ddd dd/MM/yy",
                 "ddd dd/MM/yyyy",
@@ -526,27 +542,24 @@ namespace Mantenimientos.Controllers
                 "ddd d/M/yyyy"
             };
 
-            if (DateTime.TryParseExact(texto, formatosConDia, culture,
-                    System.Globalization.DateTimeStyles.None, out var fechaConDia))
-                return fechaConDia;
+            if (DateTime.TryParseExact(texto, formatosConDia, cultureMx, DateTimeStyles.None, out var fechaConDia))
+                return fechaConDia.Date;
 
-            string[] formatos = {
+            // Formatos en orden de prioridad para fechas directas como "16/05/2026" o "2026-05-16"
+            string[] formatosDirectos = {
                 "dd/MM/yyyy",
-                "d/M/yyyy",
-                "yyyy-MM-dd",
-                "MM/dd/yyyy",
                 "dd/MM/yy",
-                "d/M/yy"
+                "d/M/yyyy",
+                "d/M/yy",
+                "yyyy-MM-dd"
             };
 
-            if (DateTime.TryParseExact(texto, formatos,
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    System.Globalization.DateTimeStyles.None, out var fecha))
-                return fecha;
+            if (DateTime.TryParseExact(texto, formatosDirectos, cultureMx, DateTimeStyles.None, out var fechaExacta))
+                return fechaExacta.Date;
 
-            if (DateTime.TryParse(texto, culture,
-                    System.Globalization.DateTimeStyles.AllowWhiteSpaces, out var fecha2))
-                return fecha2;
+            // Intento final flexible con la cultura es-MX
+            if (DateTime.TryParse(texto, cultureMx, DateTimeStyles.AllowWhiteSpaces, out var fechaFlexible))
+                return fechaFlexible.Date;
 
             return null;
         }

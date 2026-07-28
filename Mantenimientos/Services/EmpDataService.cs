@@ -91,20 +91,22 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // Búsqueda de sucursal por nombre con normalización, Levenshtein e intersección corregida
+        // listo, pero antes si me funcinaba en sucursales como Iztapalapa 1, lo insertaba en Iztapalapa, y tambien en 
+
+        // busqueda de sucursal por nombre con normalización
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
             if (string.IsNullOrWhiteSpace(nombreExcel) || sucursales.Count == 0)
                 return ResultadoBusquedaSucursal.NoEncontrada();
-            // normalizar el nombre de la sucursal del Excel
+
             string normalizadoExcel = NormalizarTexto(nombreExcel);
 
-            // busqueda sin quitar palabras clave, para encontrar coincidencias exactas
+            // busqueda exacta sin remover palabras
             var exactas = sucursales.Where(s => NormalizarTexto(s.Nombre) == normalizadoExcel).ToList();
             if (exactas.Count == 1) return ResultadoBusquedaSucursal.Encontrada(exactas[0].CLV_SUC);
             if (exactas.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
-            // quitar palabras comunes 
+            // extraer esencia del nombre quitando palabras comunes 
             string coincidenciaExcel = ExtraerCoincidencia(normalizadoExcel);
             if (string.IsNullOrWhiteSpace(coincidenciaExcel)) return ResultadoBusquedaSucursal.NoEncontrada();
 
@@ -112,7 +114,7 @@ namespace Mantenimientos.Services
                 .Select(s => new { s.CLV_SUC, CoincidenciaBD = ExtraerCoincidencia(NormalizarTexto(s.Nombre)) })
                 .ToList();
 
-            // busqueda exacta con coincidencia de palabras clave
+            // busqueda exacta por coincidencia limpia
             var coincidenciaExacta = candidatosCoincidencia.Where(c => c.CoincidenciaBD == coincidenciaExcel).ToList();
             if (coincidenciaExacta.Count == 1) return ResultadoBusquedaSucursal.Encontrada(coincidenciaExacta[0].CLV_SUC);
             if (coincidenciaExacta.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
@@ -134,7 +136,6 @@ namespace Mantenimientos.Services
                 if (resultadosFuzzy.Count == 1)
                     return ResultadoBusquedaSucursal.Encontrada(resultadosFuzzy[0].CLV_SUC);
 
-                // Si hay un empate cercano en el puntaje más alto
                 if (Math.Abs(resultadosFuzzy[0].Similitud - resultadosFuzzy[1].Similitud) < 0.001)
                     return ResultadoBusquedaSucursal.Impreciso();
 
@@ -149,8 +150,8 @@ namespace Mantenimientos.Services
                     var palabrasBD = c.CoincidenciaBD.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     if (palabrasBD.Length == 0) return false;
 
-                    int matchExcel = palabrasExcel.Count(pe => palabrasBD.Any(pb => CalcularSimilitud(pe, pb) >= 0.80));
-                    int matchBD = palabrasBD.Count(pb => palabrasExcel.Any(pe => CalcularSimilitud(pb, pe) >= 0.80));
+                    int matchExcel = palabrasExcel.Count(pe => palabrasBD.Any(pb => CalcularSimilitud(pe, pb) >= 0.70));
+                    int matchBD = palabrasBD.Count(pb => palabrasExcel.Any(pe => CalcularSimilitud(pb, pe) >= 0.70));
 
                     return (matchExcel == palabrasExcel.Length) || (matchBD == palabrasBD.Length);
                 })
@@ -162,16 +163,13 @@ namespace Mantenimientos.Services
             return ResultadoBusquedaSucursal.NoEncontrada();
         }
 
-        // Métodos auxiliares para la búsqueda
         private static string NormalizarTexto(string texto)
         {
             if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
 
-            // Limpieza de signos y espacios
             string limpio = texto.Trim().Replace("(", " ").Replace(")", " ").Replace("-", " ").Replace(".", " ");
             limpio = System.Text.RegularExpressions.Regex.Replace(limpio, @"\s+", " ").ToLowerInvariant();
 
-            // Quitar acentos
             var normalizadoFormD = limpio.Normalize(System.Text.NormalizationForm.FormD);
             var resultado = new StringBuilder();
 
@@ -186,7 +184,7 @@ namespace Mantenimientos.Services
 
         private static string ExtraerCoincidencia(string textoNormalizado)
         {
-            string[] palabrasIgnorar = { "intermedio", "bimbo", "ceve", "cd", "de", "y", "del", "la", "las", "el", "los" };
+            string[] palabrasIgnorar = {"intermedio", "ceve", "cd", "de", "y", "la", "auto", "cedis"};
 
             var palabras = textoNormalizado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var palabrasUtiles = palabras.Where(p => !palabrasIgnorar.Contains(p));
@@ -194,7 +192,6 @@ namespace Mantenimientos.Services
             return string.Join(" ", palabrasUtiles);
         }
 
-        // Algoritmo de Distancia de Levenshtein
         private static double CalcularSimilitud(string source, string target)
         {
             if (string.IsNullOrEmpty(source)) return string.IsNullOrEmpty(target) ? 1.0 : 0.0;
@@ -225,7 +222,6 @@ namespace Mantenimientos.Services
             return 1.0 - ((double)operaciones / maxLongitud);
         }
 
-        // Fechas reales
         public async Task<FechasRealesDto?> ObtenerFechasRealesAsync(string clvSuc, int periodo)
         {
             await using var conn = new SqlConnection(_connectionString);
@@ -252,7 +248,6 @@ namespace Mantenimientos.Services
             return null;
         }
 
-        // Consulta principal
         public async Task<List<SeguimientoJoinDto>> ObtenerSeguimientosAsync(
             int periodo,
             int? filtroRuta = null,
@@ -359,7 +354,6 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // Helper privado
         private static SucursalDto LeerSucursalDto(SqlDataReader r) => new()
         {
             CLV_SUC = r["CLV_SUC"].ToString()!,
@@ -369,7 +363,6 @@ namespace Mantenimientos.Services
         };
     }
 }
-
 // DTOs
 public class SucursalDto
 {
