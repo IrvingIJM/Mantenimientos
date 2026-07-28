@@ -182,7 +182,7 @@ namespace Mantenimientos.Services
 
         private static string ExtraerCoincidencia(string textoNormalizado)
         {
-            string[] palabrasIgnorar = {"intermedio", "ceve", "cd", "de", "y", "la", "auto", "cedis"};
+            string[] palabrasIgnorar = {"intermedio", "ceve", "cd", "de","del", "y", "la", "auto", "cedis"};
 
             var palabras = textoNormalizado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var palabrasUtiles = palabras.Where(p => !palabrasIgnorar.Contains(p));
