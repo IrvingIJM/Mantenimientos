@@ -91,8 +91,6 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // listo, pero antes si me funcinaba en sucursales como Iztapalapa 1, lo insertaba en Iztapalapa, y tambien en 
-
         // busqueda de sucursal por nombre con normalización
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
