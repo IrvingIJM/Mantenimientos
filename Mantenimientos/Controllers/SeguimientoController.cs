@@ -377,9 +377,6 @@ namespace Mantenimientos.Controllers
 
                 int primeraFila = 4;
                 int ultimaFila = hoja.LastRowUsed()?.RowNumber() ?? primeraFila;
-
-                _logger.LogInformation($"Procesando Excel: Primera fila {primeraFila}, Última fila {ultimaFila}, Período {periodo}");
-
                 for (int f = primeraFila; f <= ultimaFila; f++)
                 {
                     string nombreCelda = hoja.Cell(f, 3).GetString().Trim();
@@ -399,7 +396,7 @@ namespace Mantenimientos.Controllers
                     {
                         resultado.Imprecisos++;
                         resultado.NombresImprecisos.Add(nombreCelda);
-                        _logger.LogWarning($"Sucursal ambigua: {nombreCelda}");
+                        _logger.LogWarning($"Sucursal imprecisa: {nombreCelda}");
                         continue;
                     }
 
@@ -457,7 +454,6 @@ namespace Mantenimientos.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al procesar Excel.");
                 TempData["Mensaje"] = $"Error al procesar el archivo: {ex.Message}";
                 TempData["TipoAlerta"] = "danger";
             }
@@ -499,19 +495,17 @@ namespace Mantenimientos.Controllers
             }
         }
 
-        private static string FormatFechaExcel(DateTime? f) =>
-            f.HasValue ? f.Value.ToString("dd/MM/yyyy") : string.Empty;
+        private static string FormatFechaExcel(DateTime? f) => f.HasValue ? f.Value.ToString("dd/MM/yyyy") : string.Empty;
 
         private static DateTime? LeerFechaExcel(IXLCell celda)
         {
             if (celda.IsEmpty()) return null;
-
             if (celda.DataType == XLDataType.DateTime)
             {
                 return celda.GetDateTime().Date; 
             }
 
-            // Si la celda viene como número (posiblemente un valor de fecha en formato OLE)
+            // Si la celda viene como numero
             if (celda.DataType == XLDataType.Number)
             {
                 double val = celda.GetDouble();
@@ -528,13 +522,12 @@ namespace Mantenimientos.Controllers
                 }
             }
 
-            // Si la celda viene formateada como Texto
+            // Si la celda viene como texo
             var texto = celda.GetString().Trim();
             if (string.IsNullOrEmpty(texto)) return null;
 
             var cultureMx = new CultureInfo("es-MX");
-
-            // Formatos estrictos para fechas escritas como "lun 16/05/26" o con día de semana
+            // Formatos que incluyen el día de la semana como "Lun 16/05/2026"
             string[] formatosConDia = {
                 "ddd dd/MM/yy",
                 "ddd dd/MM/yyyy",

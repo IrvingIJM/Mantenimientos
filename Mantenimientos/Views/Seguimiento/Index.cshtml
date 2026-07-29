@@ -55,7 +55,7 @@
     @if (resumenImportacion != null)
     {
         var tipoImport = resumenImportacion.Actualizados > 0 ? "success" : "warning";
-        <!-- Alerta de importación -->
+        <!-- alerta de importacion-->
         <div class="position-fixed" style="top: 80px; right: 20px; width: 380px; max-width: calc(100vw - 40px); z-index: 1080;">
             <div class="alert alert-@tipoImport alert-dismissible fade show shadow-lg mb-0" role="alert">
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -71,7 +71,7 @@
                 </button>
             </div>
         </div>
-
+        <!-- modal de detalle de importacion-->
         <div class="modal fade" id="modalDetalleImportacion" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-scrollable">
                 <div class="modal-content">
