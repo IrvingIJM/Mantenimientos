@@ -182,7 +182,7 @@ namespace Mantenimientos.Services
 
         private static string ExtraerCoincidencia(string textoNormalizado)
         {
-            string[] palabrasIgnorar = {"intermedio", "ceve", "cd", "de","del", "y", "la", "auto", "cedis"};
+            string[] palabrasIgnorar = {"intermedio","bimbo", "ceve", "cd", "de","del", "y", "la", "auto", "cedis"};
 
             var palabras = textoNormalizado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var palabrasUtiles = palabras.Where(p => !palabrasIgnorar.Contains(p));
@@ -220,6 +220,7 @@ namespace Mantenimientos.Services
             return 1.0 - ((double)operaciones / maxLongitud);
         }
 
+        // Obtener fechas reales de inicio y fin de un periodo para una sucursal
         public async Task<FechasRealesDto?> ObtenerFechasRealesAsync(string clvSuc, int periodo)
         {
             await using var conn = new SqlConnection(_connectionString);
@@ -246,6 +247,7 @@ namespace Mantenimientos.Services
             return null;
         }
 
+        // Obtener seguimientos con filtros opcionales
         public async Task<List<SeguimientoJoinDto>> ObtenerSeguimientosAsync(
             int periodo,
             int? filtroRuta = null,
@@ -318,7 +320,6 @@ namespace Mantenimientos.Services
             {
                 sql.Append(" AND dbr.F_Termino IS NOT NULL AND dbr.F_Termino > '1900-01-01'");
             }
-
             if (filtroMesInicio.HasValue)
             {
                 sql.Append(" ORDER BY (MONTH(dbr.F_Termino) - @MesIni + 12) % 12, suc.RUTA, suc.Sucursal");
