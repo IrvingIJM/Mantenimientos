@@ -91,6 +91,8 @@ namespace Mantenimientos.Services
             return lista;
         }
 
+        // Hay un problema con la búsqueda de sucursal por nombre, el sistema inserta la fecha en la sucursal incorrecta, te dejo un ejemplo de lo que pasa, el sistema si encuantra la sucursal pero no es la correcta.
+
         // busqueda de sucursal por nombre con normalización
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
