@@ -338,8 +338,9 @@ namespace Mantenimientos.Controllers
             hoja.Cell("C3").Value = "Sucursal";
             hoja.Cell("D3").Value = "Fecha Inicio";
             hoja.Cell("E3").Value = "Fecha Fin";
+            hoja.Cell("F3").Value = "Observaciones";
 
-            var rango = hoja.Range("C3:E3");
+            var rango = hoja.Range("C3:F3");
             rango.Style.Font.SetBold(true)
                  .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
                  .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
