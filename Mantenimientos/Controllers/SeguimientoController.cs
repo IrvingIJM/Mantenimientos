@@ -272,12 +272,11 @@ namespace Mantenimientos.Controllers
             int fila = 1;
             bool primerGrupo = true;
 
-            // Agrupa por Ruta conservando el orden en que ya vienen los datos,
-            // y repite el encabezado completo para cada grupo de ruta.
+            // agrupar por ruta y crear encabezados para cada grupo
             foreach (var grupo in datos.GroupBy(d => d.RUTA))
             {
                 if (!primerGrupo)
-                    fila++; // fila en blanco entre bloques de ruta
+                    fila++;
                 primerGrupo = false;
 
                 int filaEnc1 = fila;
@@ -397,8 +396,7 @@ namespace Mantenimientos.Controllers
                 {
                     string nombreCelda = hoja.Cell(f, 3).GetString().Trim();
 
-                    // Omite filas en blanco y filas de encabezado (el archivo exportado
-                    // repite el encabezado "Sucursal" por cada bloque de ruta).
+                    // encabezado o fila vacía, se ignora
                     if (string.IsNullOrWhiteSpace(nombreCelda) ||
                         string.Equals(nombreCelda, "Sucursal", StringComparison.OrdinalIgnoreCase))
                         continue;
