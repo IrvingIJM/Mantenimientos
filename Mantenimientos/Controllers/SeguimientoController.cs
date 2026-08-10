@@ -267,43 +267,58 @@ namespace Mantenimientos.Controllers
             using var workbook = new XLWorkbook();
             var hoja = workbook.Worksheets.Add("Mantenimientos");
             hoja.Style.Font.FontName = "Arial";
-            hoja.Style.Font.FontSize = 10;
+            hoja.Style.Font.FontSize = 8;
 
-            hoja.Cell("B3").Value = "Ruta"; hoja.Range("B3:B4").Merge();
-            hoja.Cell("C3").Value = "Sucursal"; hoja.Range("C3:C4").Merge();
-            hoja.Cell("D3").Value = "Fecha Estimada"; hoja.Range("D3:E3").Merge();
-            hoja.Cell("F3").Value = "Fecha Real"; hoja.Range("F3:G3").Merge();
-            hoja.Cell("H3").Value = "Días desfasados"; hoja.Range("H3:H4").Merge();
-            hoja.Cell("I3").Value = "Observaciones"; hoja.Range("I3:I4").Merge();
-            hoja.Cell("D4").Value = "Inicio";
-            hoja.Cell("E4").Value = "Fin";
-            hoja.Cell("F4").Value = "Inicio";
-            hoja.Cell("G4").Value = "Fin";
+            int fila = 1;
+            bool primerGrupo = true;
 
-            var rango = hoja.Range("B3:I4");
-            rango.Style.Font.SetBold(true)
-                 .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
-                 .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
-            rango.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
-            rango.Cells().Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
-
-            int fila = 5;
-            foreach (var d in datos)
+            // agrupar por ruta y crear encabezados para cada grupo
+            foreach (var grupo in datos.GroupBy(d => d.RUTA))
             {
-                hoja.Cell(fila, "B").Value = d.RUTA;
-                hoja.Cell(fila, "C").Value = d.SUCURSAL;
-                hoja.Cell(fila, "D").Value = FormatFechaExcel(d.FECHA_INI_ES);
-                hoja.Cell(fila, "E").Value = FormatFechaExcel(d.FECHA_FIN_ES);
-                hoja.Cell(fila, "F").Value = FormatFechaExcel(d.FECHA_INI_RE);
-                hoja.Cell(fila, "G").Value = FormatFechaExcel(d.FECHA_FIN_RE);
-                hoja.Cell(fila, "H").Value = d.Dias;
-                hoja.Cell(fila, "I").Value = d.OBSERVACIONES ?? string.Empty;
-                hoja.Range(fila, 2, fila, 9).Style
-                    .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
-                    .Border.SetInsideBorder(XLBorderStyleValues.Thin);
-                hoja.Range(fila, 4, fila, 8).Style
-                    .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
-                fila++;
+                if (!primerGrupo)
+                    fila++;
+                primerGrupo = false;
+
+                int filaEnc1 = fila;
+                int filaEnc2 = fila + 1;
+
+                hoja.Cell(filaEnc1, "B").Value = "Ruta"; hoja.Range(filaEnc1, 2, filaEnc2, 2).Merge();
+                hoja.Cell(filaEnc1, "C").Value = "Sucursal"; hoja.Range(filaEnc1, 3, filaEnc2, 3).Merge();
+                hoja.Cell(filaEnc1, "D").Value = "Fecha Estimada"; hoja.Range(filaEnc1, 4, filaEnc1, 5).Merge();
+                hoja.Cell(filaEnc1, "F").Value = "Fecha Real"; hoja.Range(filaEnc1, 6, filaEnc1, 7).Merge();
+                hoja.Cell(filaEnc1, "H").Value = "Días desfasados"; hoja.Range(filaEnc1, 8, filaEnc2, 8).Merge();
+                hoja.Cell(filaEnc1, "I").Value = "Observaciones"; hoja.Range(filaEnc1, 9, filaEnc2, 9).Merge();
+                hoja.Cell(filaEnc2, "D").Value = "Inicio";
+                hoja.Cell(filaEnc2, "E").Value = "Fin";
+                hoja.Cell(filaEnc2, "F").Value = "Inicio";
+                hoja.Cell(filaEnc2, "G").Value = "Fin";
+
+                var rango = hoja.Range(filaEnc1, 2, filaEnc2, 9);
+                rango.Style.Font.SetBold(true)
+                     .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+                     .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
+                rango.Cells().Style.Border.SetOutsideBorder(XLBorderStyleValues.Medium);
+                rango.Cells().Style.Border.SetInsideBorder(XLBorderStyleValues.Thin);
+
+                fila = filaEnc2 + 1;
+
+                foreach (var d in grupo)
+                {
+                    hoja.Cell(fila, "B").Value = d.RUTA;
+                    hoja.Cell(fila, "C").Value = d.SUCURSAL;
+                    hoja.Cell(fila, "D").Value = FormatFechaExcel(d.FECHA_INI_ES);
+                    hoja.Cell(fila, "E").Value = FormatFechaExcel(d.FECHA_FIN_ES);
+                    hoja.Cell(fila, "F").Value = FormatFechaExcel(d.FECHA_INI_RE);
+                    hoja.Cell(fila, "G").Value = FormatFechaExcel(d.FECHA_FIN_RE);
+                    hoja.Cell(fila, "H").Value = d.Dias;
+                    hoja.Cell(fila, "I").Value = d.OBSERVACIONES ?? string.Empty;
+                    hoja.Range(fila, 2, fila, 9).Style
+                        .Border.SetOutsideBorder(XLBorderStyleValues.Thin)
+                        .Border.SetInsideBorder(XLBorderStyleValues.Thin);
+                    hoja.Range(fila, 4, fila, 8).Style
+                        .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+                    fila++;
+                }
             }
             hoja.Columns("B:I").AdjustToContents();
             using var ms = new MemoryStream();
@@ -323,8 +338,9 @@ namespace Mantenimientos.Controllers
             hoja.Cell("C3").Value = "Sucursal";
             hoja.Cell("D3").Value = "Fecha Inicio";
             hoja.Cell("E3").Value = "Fecha Fin";
+            hoja.Cell("F3").Value = "Observaciones";
 
-            var rango = hoja.Range("C3:E3");
+            var rango = hoja.Range("C3:F3");
             rango.Style.Font.SetBold(true)
                  .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
                  .Alignment.SetVertical(XLAlignmentVerticalValues.Center);
@@ -375,20 +391,23 @@ namespace Mantenimientos.Controllers
                 using var workbook = new XLWorkbook(stream);
                 var hoja = workbook.Worksheets.First();
 
-                int primeraFila = 4;
+                int primeraFila = 1;
                 int ultimaFila = hoja.LastRowUsed()?.RowNumber() ?? primeraFila;
                 for (int f = primeraFila; f <= ultimaFila; f++)
                 {
                     string nombreCelda = hoja.Cell(f, 3).GetString().Trim();
 
-                    if (string.IsNullOrWhiteSpace(nombreCelda))
+                    // encabezado o fila vacía, se ignora
+                    if (string.IsNullOrWhiteSpace(nombreCelda) ||
+                        string.Equals(nombreCelda, "Sucursal", StringComparison.OrdinalIgnoreCase))
                         continue;
                     resultado.TotalFilas++;
 
                     DateTime? fechaIni = LeerFechaExcel(hoja.Cell(f, 4));
                     DateTime? fechaFin = LeerFechaExcel(hoja.Cell(f, 5));
+                    string observacionesExcel = hoja.Cell(f, 6).GetString().Trim();
 
-                    _logger.LogInformation($"Fila {f}: Sucursal='{nombreCelda}', FechaIni={fechaIni?.ToString("dd/MM/yyyy") ?? "null"}, FechaFin={fechaFin?.ToString("dd/MM/yyyy") ?? "null"}");
+                    _logger.LogInformation($"Fila {f}: Sucursal='{nombreCelda}', FechaIni={fechaIni?.ToString("dd/MM/yyyy") ?? "null"}, FechaFin={fechaFin?.ToString("dd/MM/yyyy") ?? "null"}, Observaciones='{observacionesExcel}'");
 
                     var busqueda = EmpDataService.BuscarSucursalPorNombre(nombreCelda, sucursalesActivas);
 
@@ -419,20 +438,29 @@ namespace Mantenimientos.Controllers
                     }
 
                     bool tieneAlgunaFecha = fechaIni.HasValue || fechaFin.HasValue;
-                    if (tieneAlgunaFecha)
+                    bool tieneObservaciones = !string.IsNullOrWhiteSpace(observacionesExcel);
+
+                    if (tieneAlgunaFecha || tieneObservaciones)
                     {
-                        seguimiento.FECHA_INI_ES = fechaIni;
-                        seguimiento.FECHA_FIN_ES = fechaFin;
+                        if (tieneAlgunaFecha)
+                        {
+                            seguimiento.FECHA_INI_ES = fechaIni;
+                            seguimiento.FECHA_FIN_ES = fechaFin;
+                        }
+                        if (tieneObservaciones)
+                        {
+                            seguimiento.OBSERVACIONES = observacionesExcel;
+                        }
                         resultado.Actualizados++;
 
                         var nombreMostrado = sucursalesActivas.FirstOrDefault(s => s.CLV_SUC == clvSuc)?.Nombre ?? nombreCelda;
                         resultado.NombresActualizados.Add(nombreMostrado);
 
-                        _logger.LogInformation($"Actualizado: CLV_SUC={clvSuc}, FechaIni={fechaIni?.ToString("dd/MM/yyyy") ?? "null"}, FechaFin={fechaFin?.ToString("dd/MM/yyyy") ?? "null"}");
+                        _logger.LogInformation($"Actualizado: CLV_SUC={clvSuc}, FechaIni={fechaIni?.ToString("dd/MM/yyyy") ?? "null"}, FechaFin={fechaFin?.ToString("dd/MM/yyyy") ?? "null"}, Observaciones={(tieneObservaciones ? "actualizadas" : "sin cambios")}");
                     }
                     else
                     {
-                        _logger.LogWarning($"Sin fechas válidas para: {nombreCelda} (CLV_SUC={clvSuc})");
+                        _logger.LogWarning($"Sin fechas ni observaciones válidas para: {nombreCelda} (CLV_SUC={clvSuc})");
                     }
                 }
                 await _context.SaveChangesAsync();
@@ -502,7 +530,7 @@ namespace Mantenimientos.Controllers
             if (celda.IsEmpty()) return null;
             if (celda.DataType == XLDataType.DateTime)
             {
-                return celda.GetDateTime().Date; 
+                return celda.GetDateTime().Date;
             }
 
             // Si la celda viene como numero
