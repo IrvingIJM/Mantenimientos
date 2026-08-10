@@ -92,8 +92,6 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-
-
         // Búsqueda delegada al Helper SucursalMatcher
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
