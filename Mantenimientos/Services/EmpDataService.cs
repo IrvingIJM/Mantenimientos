@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.Globalization;
 using System.Text;
+using Mantenimientos.Helpers;
 
 namespace Mantenimientos.Services
 {
@@ -91,143 +92,39 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // Búsqueda de sucursal por nombre con jerarquía estricta y normalización
+
+
+        // Búsqueda delegada al Helper SucursalMatcher
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
             if (string.IsNullOrWhiteSpace(nombreExcel) || sucursales.Count == 0)
                 return ResultadoBusquedaSucursal.NoEncontrada();
 
-            string normalizadoExcel = NormalizarTexto(nombreExcel);
-
-            // 1. Coincidencia EXACTA Directa
-            var exactas = sucursales
-                .Where(s => NormalizarTexto(s.Nombre) == normalizadoExcel)
-                .ToList();
-
-            if (exactas.Count == 1) return ResultadoBusquedaSucursal.Encontrada(exactas[0].CLV_SUC);
-            if (exactas.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
-
-            // 2. Coincidencia EXACTA habiendo removido únicamente conectores/artículos
-            string coincidenciaExcel = ExtraerCoincidencia(normalizadoExcel);
-            if (string.IsNullOrWhiteSpace(coincidenciaExcel)) return ResultadoBusquedaSucursal.NoEncontrada();
-
-            var candidatos = sucursales
-                .Select(s => new
-                {
-                    s.CLV_SUC,
-                    NombreOriginal = NormalizarTexto(s.Nombre),
-                    CoincidenciaBD = ExtraerCoincidencia(NormalizarTexto(s.Nombre))
-                })
-                .Where(c => !string.IsNullOrWhiteSpace(c.CoincidenciaBD))
-                .ToList();
-
-            var coincidenciaExactaSinConectores = candidatos
-                .Where(c => c.CoincidenciaBD == coincidenciaExcel)
-                .ToList();
-
-            if (coincidenciaExactaSinConectores.Count == 1)
-                return ResultadoBusquedaSucursal.Encontrada(coincidenciaExactaSinConectores[0].CLV_SUC);
-            if (coincidenciaExactaSinConectores.Count > 1)
-                return ResultadoBusquedaSucursal.Impreciso();
-
-            // 3. Coincidencia por Contención de Cadena
-            var porContencion = candidatos
-                .Where(c => c.NombreOriginal.Contains(normalizadoExcel) || normalizadoExcel.Contains(c.NombreOriginal) ||
-                            c.CoincidenciaBD.Contains(coincidenciaExcel) || coincidenciaExcel.Contains(c.CoincidenciaBD))
-                .ToList();
-
-            if (porContencion.Count == 1) return ResultadoBusquedaSucursal.Encontrada(porContencion[0].CLV_SUC);
-            if (porContencion.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
-
-            // 4. Búsqueda Difusa (Fuzzy Levenshtein) Estricta (Umbral mínimo del 82%)
-            double umbralExigente = 0.82;
-            var resultadosFuzzy = candidatos
-                .Select(c => new
-                {
-                    c.CLV_SUC,
-                    Similitud = CalcularSimilitud(coincidenciaExcel, c.CoincidenciaBD)
-                })
-                .Where(x => x.Similitud >= umbralExigente)
-                .OrderByDescending(x => x.Similitud)
-                .ToList();
-
-            if (resultadosFuzzy.Count > 0)
+            // 1. Convertir la lista de SucursalDto a SucursalCandidata que requiere el Matcher
+            var candidatas = sucursales.Select(s => new SucursalCandidata
             {
-                if (resultadosFuzzy.Count == 1)
-                    return ResultadoBusquedaSucursal.Encontrada(resultadosFuzzy[0].CLV_SUC);
+                ClvSuc = s.CLV_SUC,
+                NombreBD = s.Nombre
+            });
 
-                if ((resultadosFuzzy[0].Similitud - resultadosFuzzy[1].Similitud) >= 0.05)
-                    return ResultadoBusquedaSucursal.Encontrada(resultadosFuzzy[0].CLV_SUC);
+            // 2. Ejecutar la búsqueda avanzada del Helper
+            var resultado = SucursalMatcher.BuscarMejorCoincidencia(nombreExcel, candidatas);
 
+            // 3. Evaluar el resultado según los umbrales de confianza
+            if (resultado.EsConfiable && resultado.Sucursal != null)
+            {
+                return ResultadoBusquedaSucursal.Encontrada(resultado.Sucursal.ClvSuc);
+            }
+
+            // Si tuvo una coincidencia moderada (entre 50% y 74%) que causa duda, lo marcamos como Impreciso
+            if (resultado.Score >= 0.35)
+            {
                 return ResultadoBusquedaSucursal.Impreciso();
             }
 
             return ResultadoBusquedaSucursal.NoEncontrada();
         }
-
-        private static string NormalizarTexto(string texto)
-        {
-            if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
-
-            string limpio = texto.Trim()
-                .Replace("(", " ").Replace(")", " ")
-                .Replace("-", " ").Replace(".", " ")
-                .Replace("_", " ").Replace("/", " ");
-
-            limpio = System.Text.RegularExpressions.Regex.Replace(limpio, @"\s+", " ").ToLowerInvariant();
-
-            var normalizadoFormD = limpio.Normalize(NormalizationForm.FormD);
-            var resultado = new StringBuilder();
-
-            foreach (char ch in normalizadoFormD)
-            {
-                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(ch);
-                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
-                    resultado.Append(ch);
-            }
-            return resultado.ToString().Normalize(NormalizationForm.FormC);
-        }
-
-        private static string ExtraerCoincidencia(string textoNormalizado)
-        {
-            string[] palabrasIgnorar = { "de", "del", "y", "la", "el", "los", "las" };
-
-            var palabras = textoNormalizado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var palabrasUtiles = palabras.Where(p => !palabrasIgnorar.Contains(p));
-
-            return string.Join(" ", palabrasUtiles);
-        }
-
-        private static double CalcularSimilitud(string source, string target)
-        {
-            if (string.IsNullOrEmpty(source)) return string.IsNullOrEmpty(target) ? 1.0 : 0.0;
-            if (string.IsNullOrEmpty(target)) return 0.0;
-
-            int n = source.Length;
-            int m = target.Length;
-            int[,] d = new int[n + 1, m + 1];
-
-            if (n == 0) return m;
-            if (m == 0) return n;
-
-            for (int i = 0; i <= n; d[i, 0] = i++) { }
-            for (int j = 0; j <= m; d[0, j] = j++) { }
-
-            for (int i = 1; i <= n; i++)
-            {
-                for (int j = 1; j <= m; j++)
-                {
-                    int cost = (target[j - 1] == source[i - 1]) ? 0 : 1;
-                    d[i, j] = Math.Min(
-                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
-                        d[i - 1, j - 1] + cost);
-                }
-            }
-            int operaciones = d[n, m];
-            int maxLongitud = Math.Max(n, m);
-            return 1.0 - ((double)operaciones / maxLongitud);
-        }
-
+        
         // Obtener fechas reales de inicio y fin de un periodo para una sucursal
         public async Task<FechasRealesDto?> ObtenerFechasRealesAsync(string clvSuc, int periodo)
         {
