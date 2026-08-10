@@ -1,5 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
-using Microsoft.Win32;
+using System.Globalization;
 using System.Text;
 
 namespace Mantenimientos.Services
@@ -91,9 +91,7 @@ namespace Mantenimientos.Services
             return lista;
         }
 
-        // Hay un problema con la búsqueda de sucursal por nombre, el sistema inserta la fecha en la sucursal incorrecta, te dejo un ejemplo de lo que pasa, el sistema si encuantra la sucursal pero no es la correcta.
-
-        // busqueda de sucursal por nombre con normalización
+        // Búsqueda de sucursal por nombre con jerarquía estricta y normalización
         public static ResultadoBusquedaSucursal BuscarSucursalPorNombre(string nombreExcel, IReadOnlyList<SucursalDto> sucursales)
         {
             if (string.IsNullOrWhiteSpace(nombreExcel) || sucursales.Count == 0)
@@ -101,33 +99,55 @@ namespace Mantenimientos.Services
 
             string normalizadoExcel = NormalizarTexto(nombreExcel);
 
-            // busqueda exacta sin remover palabras
-            var exactas = sucursales.Where(s => NormalizarTexto(s.Nombre) == normalizadoExcel).ToList();
+            // 1. Coincidencia EXACTA Directa
+            var exactas = sucursales
+                .Where(s => NormalizarTexto(s.Nombre) == normalizadoExcel)
+                .ToList();
+
             if (exactas.Count == 1) return ResultadoBusquedaSucursal.Encontrada(exactas[0].CLV_SUC);
             if (exactas.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
-            // extraer esencia del nombre quitando palabras comunes 
+            // 2. Coincidencia EXACTA habiendo removido únicamente conectores/artículos
             string coincidenciaExcel = ExtraerCoincidencia(normalizadoExcel);
             if (string.IsNullOrWhiteSpace(coincidenciaExcel)) return ResultadoBusquedaSucursal.NoEncontrada();
 
-            var candidatosCoincidencia = sucursales
-                .Select(s => new { s.CLV_SUC, CoincidenciaBD = ExtraerCoincidencia(NormalizarTexto(s.Nombre)) })
+            var candidatos = sucursales
+                .Select(s => new
+                {
+                    s.CLV_SUC,
+                    NombreOriginal = NormalizarTexto(s.Nombre),
+                    CoincidenciaBD = ExtraerCoincidencia(NormalizarTexto(s.Nombre))
+                })
+                .Where(c => !string.IsNullOrWhiteSpace(c.CoincidenciaBD))
                 .ToList();
 
-            // busqueda exacta por coincidencia limpia
-            var coincidenciaExacta = candidatosCoincidencia.Where(c => c.CoincidenciaBD == coincidenciaExcel).ToList();
-            if (coincidenciaExacta.Count == 1) return ResultadoBusquedaSucursal.Encontrada(coincidenciaExacta[0].CLV_SUC);
-            if (coincidenciaExacta.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
+            var coincidenciaExactaSinConectores = candidatos
+                .Where(c => c.CoincidenciaBD == coincidenciaExcel)
+                .ToList();
 
-            // busqueda difusa con Levenshtein
-            double umbralAceptacion = 0.50;
-            var resultadosFuzzy = candidatosCoincidencia
+            if (coincidenciaExactaSinConectores.Count == 1)
+                return ResultadoBusquedaSucursal.Encontrada(coincidenciaExactaSinConectores[0].CLV_SUC);
+            if (coincidenciaExactaSinConectores.Count > 1)
+                return ResultadoBusquedaSucursal.Impreciso();
+
+            // 3. Coincidencia por Contención de Cadena
+            var porContencion = candidatos
+                .Where(c => c.NombreOriginal.Contains(normalizadoExcel) || normalizadoExcel.Contains(c.NombreOriginal) ||
+                            c.CoincidenciaBD.Contains(coincidenciaExcel) || coincidenciaExcel.Contains(c.CoincidenciaBD))
+                .ToList();
+
+            if (porContencion.Count == 1) return ResultadoBusquedaSucursal.Encontrada(porContencion[0].CLV_SUC);
+            if (porContencion.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
+
+            // 4. Búsqueda Difusa (Fuzzy Levenshtein) Estricta (Umbral mínimo del 82%)
+            double umbralExigente = 0.82;
+            var resultadosFuzzy = candidatos
                 .Select(c => new
                 {
                     c.CLV_SUC,
                     Similitud = CalcularSimilitud(coincidenciaExcel, c.CoincidenciaBD)
                 })
-                .Where(x => x.Similitud >= umbralAceptacion)
+                .Where(x => x.Similitud >= umbralExigente)
                 .OrderByDescending(x => x.Similitud)
                 .ToList();
 
@@ -136,29 +156,11 @@ namespace Mantenimientos.Services
                 if (resultadosFuzzy.Count == 1)
                     return ResultadoBusquedaSucursal.Encontrada(resultadosFuzzy[0].CLV_SUC);
 
-                if (Math.Abs(resultadosFuzzy[0].Similitud - resultadosFuzzy[1].Similitud) < 0.001)
-                    return ResultadoBusquedaSucursal.Impreciso();
+                if ((resultadosFuzzy[0].Similitud - resultadosFuzzy[1].Similitud) >= 0.05)
+                    return ResultadoBusquedaSucursal.Encontrada(resultadosFuzzy[0].CLV_SUC);
 
-                return ResultadoBusquedaSucursal.Encontrada(resultadosFuzzy[0].CLV_SUC);
+                return ResultadoBusquedaSucursal.Impreciso();
             }
-
-            // busqueda por intersección de palabras con Levenshtein
-            var palabrasExcel = coincidenciaExcel.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var resultadosInterseccion = candidatosCoincidencia
-                .Where(c =>
-                {
-                    var palabrasBD = c.CoincidenciaBD.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (palabrasBD.Length == 0) return false;
-
-                    int matchExcel = palabrasExcel.Count(pe => palabrasBD.Any(pb => CalcularSimilitud(pe, pb) >= 0.70));
-                    int matchBD = palabrasBD.Count(pb => palabrasExcel.Any(pe => CalcularSimilitud(pb, pe) >= 0.70));
-
-                    return (matchExcel == palabrasExcel.Length) || (matchBD == palabrasBD.Length);
-                })
-                .ToList();
-
-            if (resultadosInterseccion.Count == 1) return ResultadoBusquedaSucursal.Encontrada(resultadosInterseccion[0].CLV_SUC);
-            if (resultadosInterseccion.Count > 1) return ResultadoBusquedaSucursal.Impreciso();
 
             return ResultadoBusquedaSucursal.NoEncontrada();
         }
@@ -167,24 +169,28 @@ namespace Mantenimientos.Services
         {
             if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
 
-            string limpio = texto.Trim().Replace("(", " ").Replace(")", " ").Replace("-", " ").Replace(".", " ");
+            string limpio = texto.Trim()
+                .Replace("(", " ").Replace(")", " ")
+                .Replace("-", " ").Replace(".", " ")
+                .Replace("_", " ").Replace("/", " ");
+
             limpio = System.Text.RegularExpressions.Regex.Replace(limpio, @"\s+", " ").ToLowerInvariant();
 
-            var normalizadoFormD = limpio.Normalize(System.Text.NormalizationForm.FormD);
+            var normalizadoFormD = limpio.Normalize(NormalizationForm.FormD);
             var resultado = new StringBuilder();
 
             foreach (char ch in normalizadoFormD)
             {
-                var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
-                if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(ch);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
                     resultado.Append(ch);
             }
-            return resultado.ToString().Normalize(System.Text.NormalizationForm.FormC);
+            return resultado.ToString().Normalize(NormalizationForm.FormC);
         }
 
         private static string ExtraerCoincidencia(string textoNormalizado)
         {
-            string[] palabrasIgnorar = {"intermedio","bimbo", "ceve", "cd", "de","del", "y", "la", "auto", "cedis"};
+            string[] palabrasIgnorar = { "de", "del", "y", "la", "el", "los", "las" };
 
             var palabras = textoNormalizado.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             var palabrasUtiles = palabras.Where(p => !palabrasIgnorar.Contains(p));
@@ -363,60 +369,61 @@ namespace Mantenimientos.Services
             REGION = r.GetByte(r.GetOrdinal("ID_REG"))
         };
     }
-}
-// DTOs
-public class SucursalDto
-{
-    public string CLV_SUC { get; set; } = string.Empty;
-    public string Nombre { get; set; } = string.Empty;
-    public byte RUTA { get; set; }
-    public byte REGION { get; set; }
-}
 
-public class FechasRealesDto
-{
-    public DateTime? FechaInicio { get; set; }
-    public DateTime? FechaFin { get; set; }
-}
+    // DTOs
+    public class SucursalDto
+    {
+        public string CLV_SUC { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public byte RUTA { get; set; }
+        public byte REGION { get; set; }
+    }
 
-public class SeguimientoJoinDto
-{
-    public int ID { get; set; }
-    public string CLV_SUC { get; set; } = string.Empty;
-    public int ID_PERIODO { get; set; }
-    public string SUCURSAL { get; set; } = string.Empty;
-    public byte RUTA { get; set; }
-    public byte REGION { get; set; }
-    public DateTime? FECHA_INI_ES { get; set; }
-    public DateTime? FECHA_FIN_ES { get; set; }
-    public DateTime? FECHA_INI_RE { get; set; }
-    public DateTime? FECHA_FIN_RE { get; set; }
-    public string? OBSERVACIONES { get; set; }
-    public int? Dias =>
-        (FECHA_INI_RE.HasValue && FECHA_INI_ES.HasValue)
-            ? (int?)(FECHA_INI_RE.Value.Date - FECHA_INI_ES.Value.Date).Days
-            : null;
-}
+    public class FechasRealesDto
+    {
+        public DateTime? FechaInicio { get; set; }
+        public DateTime? FechaFin { get; set; }
+    }
 
-public class ExcelUpDto
-{
-    public int TotalFilas { get; set; }
-    public int Actualizados { get; set; }
-    public int NoEncontrados { get; set; }
-    public int Imprecisos { get; set; }
+    public class SeguimientoJoinDto
+    {
+        public int ID { get; set; }
+        public string CLV_SUC { get; set; } = string.Empty;
+        public int ID_PERIODO { get; set; }
+        public string SUCURSAL { get; set; } = string.Empty;
+        public byte RUTA { get; set; }
+        public byte REGION { get; set; }
+        public DateTime? FECHA_INI_ES { get; set; }
+        public DateTime? FECHA_FIN_ES { get; set; }
+        public DateTime? FECHA_INI_RE { get; set; }
+        public DateTime? FECHA_FIN_RE { get; set; }
+        public string? OBSERVACIONES { get; set; }
+        public int? Dias =>
+            (FECHA_INI_RE.HasValue && FECHA_INI_ES.HasValue)
+                ? (int?)(FECHA_INI_RE.Value.Date - FECHA_INI_ES.Value.Date).Days
+                : null;
+    }
 
-    public List<string> NombresNoEncontrados { get; set; } = new();
-    public List<string> NombresImprecisos { get; set; } = new();
-    public List<string> NombresActualizados { get; set; } = new();
-}
+    public class ExcelUpDto
+    {
+        public int TotalFilas { get; set; }
+        public int Actualizados { get; set; }
+        public int NoEncontrados { get; set; }
+        public int Imprecisos { get; set; }
 
-public class ResultadoBusquedaSucursal
-{
-    public string? ClvSuc { get; private set; }
-    public bool EsImpreciso { get; private set; }
-    public bool Encontrado => ClvSuc != null;
+        public List<string> NombresNoEncontrados { get; set; } = new();
+        public List<string> NombresImprecisos { get; set; } = new();
+        public List<string> NombresActualizados { get; set; } = new();
+    }
 
-    public static ResultadoBusquedaSucursal Encontrada(string clvSuc) => new() { ClvSuc = clvSuc };
-    public static ResultadoBusquedaSucursal Impreciso() => new() { EsImpreciso = true };
-    public static ResultadoBusquedaSucursal NoEncontrada() => new();
+    public class ResultadoBusquedaSucursal
+    {
+        public string? ClvSuc { get; private set; }
+        public bool EsImpreciso { get; private set; }
+        public bool Encontrado => ClvSuc != null;
+
+        public static ResultadoBusquedaSucursal Encontrada(string clvSuc) => new() { ClvSuc = clvSuc };
+        public static ResultadoBusquedaSucursal Impreciso() => new() { EsImpreciso = true };
+        public static ResultadoBusquedaSucursal NoEncontrada() => new();
+    }
 }
