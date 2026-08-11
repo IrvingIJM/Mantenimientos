@@ -23,10 +23,9 @@ namespace Mantenimientos.Helpers
 
     public static class SucursalMatcher
     {
-        // 1. CAPA DE ALIAS: Casos del Excel que cambian estructuralmente respecto a la BD o carecen de información vital
+        // casos especiales de coincidencia exacta para nombres de sucursales en Excel que no coinciden directamente con la base de datos
         private static readonly Dictionary<string, string> CasosEspecialesExcel = new(StringComparer.OrdinalIgnoreCase)
         {
-            // Fusiones y sufijos cambiados
             { "bimbo y barcel cordoba", "cordoba" },
             { "bimbo-barcel culiacán bugambilias", "barcel culiacan" },
             { "ceve juarez auto (fusion ruiseñor)", "juarez auto nuevo canal" },
@@ -36,7 +35,6 @@ namespace Mantenimientos.Helpers
             { "ceve san jose iturbide (int.)", "san jose iturbide intermedio" },
             { "culiacán bachigualato", "culiacan bachigualatos" },
             
-            // Faltas de palabras clave o nombres oficiales distintos
             { "bilbao", "san lorenzo bilbao" },
             { "ceve barcel león", "barcel leon san miguel" },
             { "ceve huejutla", "huejutla de reyes" },
@@ -46,7 +44,6 @@ namespace Mantenimientos.Helpers
             { "bimbo r. michel", "r. michel" },
             { "ceve cuahutemoc", "cuauhtemoc" },
             
-            // Reordenamientos y typos de la base de datos
             { "tlaquepaque cedis", "tlaqueparque cedis" },
             { "ceve marinela reynosa", "reynosa marinela" },
             { "ceve reynosa bimbo y barcel", "reynosa bimbo" },
@@ -58,13 +55,11 @@ namespace Mantenimientos.Helpers
             { "acayucan cedis", "acayucan" }
         };
 
-        // 2. DICCIONARIO DE TRADUCCIÓN Y RUIDO
         private static readonly Dictionary<string, string> Abreviaturas = new(StringComparer.OrdinalIgnoreCase)
         {
             { "cd.", "ciudad" }, { "cd", "ciudad" },{ "ind", "industrial" }, { "int.", "intermedio" }, { "int", "intermedio" },
             { "intermedio", "intermedio" }, { "auto", "auto" },
-            // Palabras de ruido que se descartan
-            { "ceve", "" }, { "planta", "" }
+            { "ceve", "" }, { "planta", "" }, { "bimbo", "" }, { "barcel", "" }, { "marinela", "" }, { "cedis", "" }
         };
 
         public static ResultadoCoincidencia BuscarMejorCoincidencia(string textoExcel, IEnumerable<SucursalCandidata> sucursalesBD)
@@ -74,7 +69,7 @@ namespace Mantenimientos.Helpers
 
             string excelLimpio = textoExcel.Trim();
 
-            // CAPA 1: Búsqueda exacta por Diccionario de Alias (100% de seguridad)
+            // busqueda exacta por Diccionario de Alias
             if (CasosEspecialesExcel.TryGetValue(excelLimpio, out string? nombreBDEsperado))
             {
                 var sucursalAlias = sucursalesBD.FirstOrDefault(s => NormalizarTextoBasico(s.NombreBD) == NormalizarTextoBasico(nombreBDEsperado));
@@ -84,15 +79,15 @@ namespace Mantenimientos.Helpers
                 }
             }
 
-            // CAPA 2: Normalización Avanzada
+            // normalización del texto de Excel y obtención de tokens
             string excelNorm = NormalizarTexto(textoExcel);
             var tokensExcel = ObtenerTokens(excelNorm);
 
-            // Coincidencia Exacta post-normalización
+            // coincidencia exacta en la base de datos
             var exactas = sucursalesBD.Where(s => NormalizarTexto(s.NombreBD) == excelNorm).ToList();
             if (exactas.Count == 1) return new ResultadoCoincidencia { Sucursal = exactas[0], Score = 1.0, EsAmbiguo = false };
 
-            // CAPA 3: Motor Difuso Basado en Tokens
+            // modificación de la puntuación basada en similitud y conflictos de marcas
             var resultados = new List<(SucursalCandidata Sucursal, double Score)>();
 
             foreach (var suc in sucursalesBD)
@@ -103,14 +98,12 @@ namespace Mantenimientos.Helpers
                 double jaccard = CalcularSimilitudJaccard(tokensExcel, tokensBD);
                 double levenshtein = CalcularSimilitudLevenshtein(excelNorm, bdNorm);
 
-                // 70% peso a coincidencia exacta de palabras, 30% a ortografía
                 double scoreFinal = (jaccard * 0.70) + (levenshtein * 0.30);
 
                 if (EsConflictoDeMarcas(excelNorm, bdNorm))
                 {
                     scoreFinal -= 0.50;
                 }
-
                 if (scoreFinal > 0.40)
                 {
                     resultados.Add((suc, scoreFinal));
@@ -122,7 +115,6 @@ namespace Mantenimientos.Helpers
             var ordenados = resultados.OrderByDescending(r => r.Score).ToList();
             var mejor = ordenados[0];
 
-            // CAPA 4: Control de Ambigüedad
             bool esAmbiguo = false;
             if (ordenados.Count > 1)
             {
@@ -130,7 +122,6 @@ namespace Mantenimientos.Helpers
                 if (mejor.Score >= 0.60 && (mejor.Score - segundo.Score) < 0.08)
                 {
                     esAmbiguo = true;
-                    // Desempate si el Excel menciona "CEDIS"
                     if (excelNorm.Contains("cedis"))
                     {
                         var matchCedis = ordenados.FirstOrDefault(x => NormalizarTexto(x.Sucursal.NombreBD).Contains("cedis"));
@@ -161,8 +152,6 @@ namespace Mantenimientos.Helpers
         public static string NormalizarTexto(string texto)
         {
             if (string.IsNullOrWhiteSpace(texto)) return string.Empty;
-
-            // Se quitó la expresión regular que eliminaba por completo el contenido de los paréntesis
             string textoSinTildes = RemoveDiacritics(texto.ToLowerInvariant());
 
             // Reemplaza paréntesis y cualquier carácter especial por un espacio, salvando las palabras internas
@@ -173,7 +162,6 @@ namespace Mantenimientos.Helpers
                                  .Where(p => !string.IsNullOrWhiteSpace(p) &&
                                              p != "y" && p != "de" && p != "del" &&
                                              p != "la" && p != "el" && p != "los" && p != "las");
-
             return string.Join(" ", palabras);
         }
 

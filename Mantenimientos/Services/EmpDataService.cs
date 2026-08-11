@@ -98,23 +98,21 @@ namespace Mantenimientos.Services
             if (string.IsNullOrWhiteSpace(nombreExcel) || sucursales.Count == 0)
                 return ResultadoBusquedaSucursal.NoEncontrada();
 
-            // 1. Convertir la lista de SucursalDto a SucursalCandidata que requiere el Matcher
+            // Convertir la lista de SucursalDto a SucursalCandidata que requiere el Matcher
             var candidatas = sucursales.Select(s => new SucursalCandidata
             {
                 ClvSuc = s.CLV_SUC,
                 NombreBD = s.Nombre
             });
 
-            // 2. Ejecutar la búsqueda avanzada del Helper
+            // Ejecutar la búsqueda avanzada del Helper
             var resultado = SucursalMatcher.BuscarMejorCoincidencia(nombreExcel, candidatas);
 
-            // 3. Evaluar el resultado según los umbrales de confianza
             if (resultado.EsConfiable && resultado.Sucursal != null)
             {
                 return ResultadoBusquedaSucursal.Encontrada(resultado.Sucursal.ClvSuc);
             }
 
-            // Si tuvo una coincidencia moderada (entre 50% y 74%) que causa duda, lo marcamos como Impreciso
             if (resultado.Score >= 0.35)
             {
                 return ResultadoBusquedaSucursal.Impreciso();
