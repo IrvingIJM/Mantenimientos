@@ -59,7 +59,7 @@ namespace Mantenimientos.Helpers
         {
             { "cd.", "ciudad" }, { "cd", "ciudad" },{ "ind", "industrial" }, { "int.", "intermedio" }, { "int", "intermedio" },
             { "intermedio", "intermedio" }, { "auto", "auto" },
-            { "ceve", "" }, { "planta", "" }, { "bimbo", "" }, { "barcel", "" }, { "marinela", "" }, { "cedis", "" }
+            { "ceve", "" }, { "planta", "" }
         };
 
         public static ResultadoCoincidencia BuscarMejorCoincidencia(string textoExcel, IEnumerable<SucursalCandidata> sucursalesBD)
